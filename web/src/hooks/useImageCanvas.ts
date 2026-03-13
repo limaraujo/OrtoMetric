@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useRef, useState } from "react";
 
+export function useImageCanvas(isDragging: boolean) {
+  const MIN_ZOOM = 0.5;
+  const MAX_ZOOM = 5;
+  const ZOOM_STEP = 0.2;
 
-export function useImageCanvas() {
   const [image, setImage] = useState<string | null>(null);
+
   const [transform, setTransform] = useState({
     zoom: 1,
     panX: 0,
@@ -11,8 +15,57 @@ export function useImageCanvas() {
     contrast: 100,
     invert: false,
   });
+
   const [isPanning, setIsPanning] = useState(false);
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+
+  const [panStart, setPanStart] = useState({
+    x: 0,
+    y: 0,
+  });
+
+  const pinchStartRef = useRef<{
+    distance: number;
+    zoom: number;
+  } | null>(null);
+
+  const clamp = (value: number, min: number, max: number) =>
+    Math.min(Math.max(value, min), max);
+
+  /*
+  ========================
+  Zoom anchored
+  ========================
+  */
+
+  const zoomAt = (
+    nextZoom: number,
+    centerX: number,
+    centerY: number,
+    rect: DOMRect
+  ) => {
+    setTransform((prev) => {
+      const currentZoom = prev.zoom;
+      const clampedZoom = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
+
+      if (clampedZoom === currentZoom) return prev;
+
+      const localX = centerX - rect.left;
+      const localY = centerY - rect.top;
+
+      return {
+        ...prev,
+        zoom: clampedZoom,
+        panX: prev.panX + localX * (1 / clampedZoom - 1 / currentZoom),
+        panY: prev.panY + localY * (1 / clampedZoom - 1 / currentZoom),
+      };
+    });
+  };
+
+  /*
+  ========================
+  Image loading
+  ========================
+  */
 
   const loadImage = (file: File) => {
     const reader = new FileReader();
@@ -20,62 +73,207 @@ export function useImageCanvas() {
     reader.readAsDataURL(file);
   };
 
+  /*
+  ========================
+  Zoom controls
+  ========================
+  */
+
   const zoomIn = () =>
-    setTransform((prev) => ({ ...prev, zoom: Math.min(prev.zoom + 0.2, 5) }));
+    setTransform((prev) => ({
+      ...prev,
+      zoom: clamp(prev.zoom + ZOOM_STEP, MIN_ZOOM, MAX_ZOOM),
+    }));
 
   const zoomOut = () =>
-    setTransform((prev) => ({ ...prev, zoom: Math.max(prev.zoom - 0.2, 0.5) }));
+    setTransform((prev) => ({
+      ...prev,
+      zoom: clamp(prev.zoom - ZOOM_STEP, MIN_ZOOM, MAX_ZOOM),
+    }));
 
   const resetZoom = () =>
-    setTransform((prev) => ({ ...prev, zoom: 1, panX: 0, panY: 0 }));
+    setTransform((prev) => ({
+      ...prev,
+      zoom: 1,
+      panX: 0,
+      panY: 0,
+    }));
+
+  /*
+  ========================
+  Image adjustments
+  ========================
+  */
 
   const setBrightness = (value: number) =>
-    setTransform((prev) => ({ ...prev, brightness: value }));
+    setTransform((prev) => ({
+      ...prev,
+      brightness: value,
+    }));
 
   const setContrast = (value: number) =>
-    setTransform((prev) => ({ ...prev, contrast: value }));
+    setTransform((prev) => ({
+      ...prev,
+      contrast: value,
+    }));
 
   const toggleInvert = () =>
-    setTransform((prev) => ({ ...prev, invert: !prev.invert }));
+    setTransform((prev) => ({
+      ...prev,
+      invert: !prev.invert,
+    }));
+
+  /*
+  ========================
+  PAN
+  ========================
+  */
 
   const startPan = (e: React.MouseEvent) => {
+    if (isDragging) return;
+
     setIsPanning(true);
-    setPanStart({ x: e.clientX, y: e.clientY });
+
+    setPanStart({
+      x: e.clientX,
+      y: e.clientY,
+    });
   };
 
   const updatePan = (e: React.MouseEvent) => {
-    if (!isPanning) return;
+    if (!isPanning || isDragging) return;
+
     const deltaX = e.clientX - panStart.x;
     const deltaY = e.clientY - panStart.y;
+
     setTransform((prev) => ({
       ...prev,
-      panX: prev.panX + deltaX,
-      panY: prev.panY + deltaY,
+      panX: prev.panX + deltaX / prev.zoom,
+      panY: prev.panY + deltaY / prev.zoom,
     }));
-    setPanStart({ x: e.clientX, y: e.clientY });
+
+    setPanStart({
+      x: e.clientX,
+      y: e.clientY,
+    });
   };
 
-  const endPan = () => setIsPanning(false);
+  const endPan = () => {
+    setIsPanning(false);
+  };
 
-  const handleWheel = (e: React.WheelEvent) => {
+  /*
+  ========================
+  Wheel zoom
+  ========================
+  */
+
+  const handleWheelZoom = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (!image) return;
+
     e.preventDefault();
-    e.deltaY > 0 ? zoomOut() : zoomIn();
+    e.stopPropagation();
+
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    const isPinch = e.ctrlKey;
+
+    let factor = 1;
+
+    if (isPinch) {
+      factor = e.deltaY < 0 ? 1.10 : 0.90;
+    } else {
+      factor = e.deltaY < 0 ? 1.1 : 0.9;
+    }
+
+    zoomAt(transform.zoom * factor, e.clientX, e.clientY, rect);
+  };
+
+  /*
+  ========================
+  Touch zoom
+  ========================
+  */
+
+  const getTouchDistance = (touches: React.TouchList) => {
+    if (touches.length < 2) return 0;
+
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+
+    return Math.hypot(dx, dy);
+  };
+
+  const getTouchCenter = (touches: React.TouchList) => ({
+    x: (touches[0].clientX + touches[1].clientX) / 2,
+    y: (touches[0].clientY + touches[1].clientY) / 2,
+  });
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!image) return;
+
+    e.preventDefault();
+
+    if (e.touches.length === 2) {
+      pinchStartRef.current = {
+        distance: getTouchDistance(e.touches),
+        zoom: transform.zoom,
+      };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!image) return;
+
+    e.preventDefault();
+
+    if (e.touches.length !== 2 || !pinchStartRef.current) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    const currentDistance = getTouchDistance(e.touches);
+
+    if (!currentDistance || !pinchStartRef.current.distance) return;
+
+    const scaleFactor = currentDistance / pinchStartRef.current.distance;
+
+    const center = getTouchCenter(e.touches);
+
+    zoomAt(
+      pinchStartRef.current.zoom * scaleFactor,
+      center.x,
+      center.y,
+      rect
+    );
+  };
+
+  const handleTouchEnd = () => {
+    pinchStartRef.current = null;
   };
 
   return {
     image,
     transform,
     isPanning,
+
     loadImage,
+
     zoomIn,
     zoomOut,
     resetZoom,
+
     setBrightness,
     setContrast,
     toggleInvert,
+
     startPan,
     updatePan,
     endPan,
-    handleWheel,
+
+    handleWheelZoom,
+
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
   };
 }

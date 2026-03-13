@@ -60,6 +60,16 @@ export function useMeasurement() {
       
       // If we have 4 points, create a measurement
       if (newPoints.length === 4) {
+        if (newPoints[0].x > newPoints[1].x) {
+          // Ensure upper line is always from left to right
+          [newPoints[0], newPoints[1]] = [newPoints[1], newPoints[0]];
+        }
+        if (newPoints[2].x > newPoints[3].x) {
+          // Ensure lower line is always from left to right
+          [newPoints[2], newPoints[3]] = [newPoints[3], newPoints[2]];
+        }
+
+
         const measurement: CobbMeasurement = {
           id: generateId(),
           upperLine: {

@@ -1,18 +1,25 @@
 type Props = {
-  src: string;
-};
+  src: string
+  brightness: number
+  contrast: number
+  invert: boolean
+}
 
-export function ImagePreview({ src }: Props) {
+export function ImagePreview({ src, brightness, contrast, invert }: Props) {
   return (
     <img
       src={src}
       alt="Imagem carregada"
       style={{
-        maxWidth: 800,
-        height: "auto",
-        border: "1px solid #ddd",
         display: "block",
+        maxHeight: "70vh",
+        objectFit: "contain",
+        filter: `brightness(${brightness}%) contrast(${contrast}%)${
+          invert ? " invert(100%)" : ""
+        }`,
+        userSelect: "none",
+        pointerEvents: "none",
       }}
     />
-  );
+  )
 }
