@@ -13,6 +13,9 @@ export default function App() {
     startDrag,
     endDrag,
     setActiveTool,
+    startAngleLabelDrag,
+    endAngleLabelDrag,
+    moveAngleLabel,
     clearAll,
     undo,
     redo,
@@ -38,7 +41,7 @@ export default function App() {
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
-  } = useImageCanvas(state.isDragging)
+  } = useImageCanvas(state.isDragging || !!state.draggedAngleLabelId)
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -73,12 +76,16 @@ export default function App() {
             activeTool={state.activeTool}
             isPanning={isPanning}
             isDragging={state.isDragging}
+            isDraggingAngleLabel={!!state.draggedAngleLabelId}
             points={state.points}
             measurements={state.measurements}
             onAddPoint={addPoint}
             onMovePoint={movePoint}
             onStartDrag={startDrag}
             onEndDrag={endDrag}
+            onMoveAngleLabel={moveAngleLabel}
+            onStartAngleLabelDrag={startAngleLabelDrag}
+            onEndAngleLabelDrag={endAngleLabelDrag}
             onLoadImage={loadImage}
             onStartPan={startPan}
             onUpdatePan={updatePan}

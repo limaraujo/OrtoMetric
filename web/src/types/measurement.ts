@@ -16,6 +16,8 @@ export interface CobbMeasurement {
   lowerLine: Line;
   angle: number;
   timestamp: Date;
+  labelX?: number;
+  labelY?: number;
 }
 
 export interface ImageTransform {
@@ -33,6 +35,7 @@ export interface MeasurementState {
   activeTool: 'none' | 'cobb' | 'pan';
   isDragging: boolean;
   draggedPointId: string | null;
+  draggedAngleLabelId: string | null;
 }
 
 export type HistoryAction = {

@@ -8,6 +8,7 @@ export type CanvasBoardProps = {
   activeTool: "none" | "cobb" | "pan"
   isPanning: boolean
   isDragging: boolean
+  isDraggingAngleLabel: boolean
   points: Point[]
   measurements: CobbMeasurement[]
 
@@ -15,6 +16,9 @@ export type CanvasBoardProps = {
   onMovePoint: (pointId: string, x: number, y: number) => void
   onStartDrag: (pointId: string) => void
   onEndDrag: () => void
+  onMoveAngleLabel: (measurementId: string, x: number, y: number) => void
+  onStartAngleLabelDrag: (measurementId: string) => void
+  onEndAngleLabelDrag: () => void
 
   onLoadImage: (file: File) => void
 

@@ -26,6 +26,8 @@ export function useImageCanvas(isDragging: boolean) {
   const pinchStartRef = useRef<{
     distance: number;
     zoom: number;
+    centerX: number;
+    centerY: number;
   } | null>(null);
 
   const clamp = (value: number, min: number, max: number) =>
@@ -49,14 +51,16 @@ export function useImageCanvas(isDragging: boolean) {
 
       if (clampedZoom === currentZoom) return prev;
 
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
       const localX = centerX - rect.left;
       const localY = centerY - rect.top;
 
       return {
         ...prev,
         zoom: clampedZoom,
-        panX: prev.panX + localX * (1 / clampedZoom - 1 / currentZoom),
-        panY: prev.panY + localY * (1 / clampedZoom - 1 / currentZoom),
+        panX: prev.panX + (localX - cx) * (currentZoom - clampedZoom),
+        panY: prev.panY + (localY - cy) * (currentZoom - clampedZoom),
       };
     });
   };
@@ -215,9 +219,12 @@ export function useImageCanvas(isDragging: boolean) {
     e.preventDefault();
 
     if (e.touches.length === 2) {
+      const center = getTouchCenter(e.touches);
       pinchStartRef.current = {
         distance: getTouchDistance(e.touches),
         zoom: transform.zoom,
+        centerX: center.x,
+        centerY: center.y,
       };
     }
   };
@@ -237,12 +244,10 @@ export function useImageCanvas(isDragging: boolean) {
 
     const scaleFactor = currentDistance / pinchStartRef.current.distance;
 
-    const center = getTouchCenter(e.touches);
-
     zoomAt(
       pinchStartRef.current.zoom * scaleFactor,
-      center.x,
-      center.y,
+      pinchStartRef.current.centerX,
+      pinchStartRef.current.centerY,
       rect
     );
   };

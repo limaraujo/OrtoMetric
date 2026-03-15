@@ -12,12 +12,16 @@ export function CanvasBoard({
   activeTool,
   isPanning,
   isDragging,
+  isDraggingAngleLabel,
   points,
   measurements,
   onAddPoint,
   onMovePoint,
   onStartDrag,
   onEndDrag,
+  onMoveAngleLabel,
+  onStartAngleLabelDrag,
+  onEndAngleLabelDrag,
   onLoadImage,
   onStartPan,
   onUpdatePan,
@@ -204,6 +208,7 @@ export function CanvasBoard({
           panY={transform.panY}
           cursor={
             isDragging ? "grabbing"
+            : isDraggingAngleLabel ? "grabbing"
             : isPanning ? "grabbing"
             : activeTool === "pan" ? "grab"
             : activeTool === "cobb" && points.length < 4 ? "crosshair"
@@ -213,6 +218,9 @@ export function CanvasBoard({
           onMovePoint={onMovePoint}
           onStartDrag={onStartDrag}
           onEndDrag={onEndDrag}
+          onMoveAngleLabel={onMoveAngleLabel}
+          onStartAngleLabelDrag={onStartAngleLabelDrag}
+          onEndAngleLabelDrag={onEndAngleLabelDrag}
         />
       </div>
 

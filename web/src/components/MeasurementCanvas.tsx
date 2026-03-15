@@ -5,6 +5,9 @@ const LINE_WIDTH = 3;
 const POINT_RADIUS = 8;
 const POINT_BORDER = 2;
 
+const ANGLE_LABEL_COLOR = "hsl(48,96%,53%)";
+const ANGLE_LABEL_HIT_THRESHOLD = 50;
+
 interface MeasurementCanvasProps {
   points: Point[];
   measurements: CobbMeasurement[];
@@ -17,6 +20,9 @@ interface MeasurementCanvasProps {
   onMovePoint: (pointId: string, x: number, y: number) => void;
   onStartDrag: (pointId: string) => void;
   onEndDrag: () => void;
+  onMoveAngleLabel: (measurementId: string, x: number, y: number) => void;
+  onStartAngleLabelDrag: (measurementId: string) => void;
+  onEndAngleLabelDrag: () => void;
 }
 
 export function MeasurementCanvas({
@@ -31,11 +37,15 @@ export function MeasurementCanvas({
   onMovePoint,
   onStartDrag,
   onEndDrag,
+  onMoveAngleLabel,
+  onStartAngleLabelDrag,
+  onEndAngleLabelDrag,
 }: MeasurementCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [draggedPoint, setDraggedPoint] = useState<string | null>(null);
+  const [draggedAngleLabelId, setDraggedAngleLabelId] = useState<string | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   /*
@@ -72,7 +82,7 @@ export function MeasurementCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     const W = containerSize.width;
     const H = containerSize.height;
@@ -82,17 +92,14 @@ export function MeasurementCanvas({
     canvas.style.width = `${W}px`;
     canvas.style.height = `${H}px`;
 
-    // Clear at identity so the full physical buffer is wiped
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!W || !H) return;
 
-    // Draw in screen space (with DPR only), mapping world coordinates manually.
-    // This keeps line/point sizes fixed in px regardless of zoom.
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const snap = (v: number) => Math.round(v * dpr) / dpr;
+    const crisp = (v: number) => Math.round(v) + 0.5;
     const toScreen = (p: { x: number; y: number }) => ({
       x: (p.x - W / 2) * zoom + W / 2 + panX,
       y: (p.y - H / 2) * zoom + H / 2 + panY,
@@ -103,6 +110,7 @@ export function MeasurementCanvas({
     Helpers
     ========================
     */
+
 
     const drawLine = (
       start: { x: number; y: number },
@@ -117,8 +125,8 @@ export function MeasurementCanvas({
       ctx.strokeStyle = color;
       ctx.lineWidth = LINE_WIDTH;
       ctx.setLineDash(dash);
-      ctx.moveTo(snap(s.x), snap(s.y));
-      ctx.lineTo(snap(e.x), snap(e.y));
+      ctx.moveTo(crisp(s.x), crisp(s.y));
+      ctx.lineTo(crisp(e.x), crisp(e.y));
       ctx.stroke();
       ctx.setLineDash([]);
     };
@@ -142,12 +150,14 @@ export function MeasurementCanvas({
 
     const drawPoint = (point: Point, index: number) => {
       const p = toScreen(point);
+      const cx = crisp(p.x);
+      const cy = crisp(p.y);
 
       ctx.beginPath();
       ctx.fillStyle = "hsl(0, 84%, 60%)";
       ctx.strokeStyle = "white";
       ctx.lineWidth = POINT_BORDER;
-      ctx.arc(snap(p.x), snap(p.y), POINT_RADIUS, 0, Math.PI * 2);
+      ctx.arc(cx, cy, POINT_RADIUS, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
@@ -155,7 +165,7 @@ export function MeasurementCanvas({
       ctx.font = `bold 10px Inter, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(`P${index + 1}`, snap(p.x), snap(p.y));
+      ctx.fillText(`P${index + 1}`, cx, cy);
     };
 
     /*
@@ -180,34 +190,36 @@ export function MeasurementCanvas({
     */
 
     measurements.forEach((m) => {
-      drawLine(m.upperLine.start, m.upperLine.end, "hsl(48,96%,53%)");
-      drawExtendedLine(m.upperLine.start, m.upperLine.end, "hsl(48,96%,53%)");
+      drawLine(m.upperLine.start, m.upperLine.end, ANGLE_LABEL_COLOR);
+      drawExtendedLine(m.upperLine.start, m.upperLine.end, ANGLE_LABEL_COLOR);
 
-      drawLine(m.lowerLine.start, m.lowerLine.end, "hsl(48,96%,53%)");
-      drawExtendedLine(m.lowerLine.start, m.lowerLine.end, "hsl(48,96%,53%)");
+      drawLine(m.lowerLine.start, m.lowerLine.end, ANGLE_LABEL_COLOR);
+      drawExtendedLine(m.lowerLine.start, m.lowerLine.end, ANGLE_LABEL_COLOR);
 
       drawPoint(m.upperLine.start, 0);
       drawPoint(m.upperLine.end, 1);
       drawPoint(m.lowerLine.start, 2);
       drawPoint(m.lowerLine.end, 3);
 
-      const center = toScreen({
+      const centerWorld = {
         x: (m.upperLine.start.x + m.upperLine.end.x +
             m.lowerLine.start.x + m.lowerLine.end.x) / 4,
         y: (m.upperLine.start.y + m.upperLine.end.y +
             m.lowerLine.start.y + m.lowerLine.end.y) / 4,
-      });
+      };
+      const labelWorld = {
+        x: m.labelX ?? centerWorld.x,
+        y: m.labelY ?? centerWorld.y,
+      };
+      const labelScreen = toScreen(labelWorld);
+      const cx = crisp(labelScreen.x);
+      const cy = crisp(labelScreen.y);
 
-      ctx.fillStyle = "hsl(199,89%,48%)";
-      ctx.beginPath();
-      ctx.roundRect(snap(center.x) - 40, snap(center.y) - 15, 80, 30, 6);
-      ctx.fill();
-
-      ctx.fillStyle = "hsl(220,20%,10%)";
+      ctx.fillStyle = ANGLE_LABEL_COLOR;
       ctx.font = "bold 14px Inter";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(`${m.angle.toFixed(1)}°`, snap(center.x), snap(center.y));
+      ctx.fillText(`${m.angle.toFixed(1)}°`, cx, cy);
     });
   }, [points, measurements, containerSize, zoom, panX, panY]);
 
@@ -268,6 +280,27 @@ export function MeasurementCanvas({
     [points, measurements, zoom]
   );
 
+  const findMeasurementLabelAtPosition = useCallback(
+    (x: number, y: number): string | null => {
+      const threshold = ANGLE_LABEL_HIT_THRESHOLD / zoom;
+
+      for (const m of measurements) {
+        const centerWorld = {
+          x: (m.upperLine.start.x + m.upperLine.end.x +
+              m.lowerLine.start.x + m.lowerLine.end.x) / 4,
+          y: (m.upperLine.start.y + m.upperLine.end.y +
+              m.lowerLine.start.y + m.lowerLine.end.y) / 4,
+        };
+        const lx = m.labelX ?? centerWorld.x;
+        const ly = m.labelY ?? centerWorld.y;
+        const dist = Math.sqrt((x - lx) ** 2 + (y - ly) ** 2);
+        if (dist < threshold) return m.id;
+      }
+      return null;
+    },
+    [measurements, zoom]
+  );
+
   /*
   ========================
   Mouse handlers
@@ -279,10 +312,16 @@ export function MeasurementCanvas({
       const { x, y } = getCanvasCoordinates(e);
 
       const pointId = findPointAtPosition(x, y);
-
       if (pointId) {
         setDraggedPoint(pointId);
         onStartDrag(pointId);
+        return;
+      }
+
+      const labelId = findMeasurementLabelAtPosition(x, y);
+      if (labelId) {
+        setDraggedAngleLabelId(labelId);
+        onStartAngleLabelDrag(labelId);
         return;
       }
 
@@ -290,25 +329,37 @@ export function MeasurementCanvas({
         onAddPoint(x, y);
       }
     },
-    [activeTool, points.length, getCanvasCoordinates, findPointAtPosition, onAddPoint, onStartDrag]
+    [activeTool, points.length, getCanvasCoordinates, findPointAtPosition, findMeasurementLabelAtPosition, onAddPoint, onStartDrag, onStartAngleLabelDrag]
   );
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      if (!draggedPoint) return;
-
       const { x, y } = getCanvasCoordinates(e);
-      onMovePoint(draggedPoint, x, y);
+
+      if (draggedPoint) {
+        onMovePoint(draggedPoint, x, y);
+        return;
+      }
+
+      if (draggedAngleLabelId) {
+        onMoveAngleLabel(draggedAngleLabelId, x, y);
+      }
     },
-    [draggedPoint, getCanvasCoordinates, onMovePoint]
+    [draggedPoint, draggedAngleLabelId, getCanvasCoordinates, onMovePoint, onMoveAngleLabel]
   );
 
   const handleMouseUp = useCallback(() => {
-    if (!draggedPoint) return;
+    if (draggedPoint) {
+      setDraggedPoint(null);
+      onEndDrag();
+      return;
+    }
 
-    setDraggedPoint(null);
-    onEndDrag();
-  }, [draggedPoint, onEndDrag]);
+    if (draggedAngleLabelId) {
+      setDraggedAngleLabelId(null);
+      onEndAngleLabelDrag();
+    }
+  }, [draggedPoint, draggedAngleLabelId, onEndDrag, onEndAngleLabelDrag]);
 
   return (
     <div

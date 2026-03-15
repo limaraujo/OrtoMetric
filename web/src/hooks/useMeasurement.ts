@@ -35,6 +35,7 @@ const INITIAL_STATE: MeasurementState = {
   activeTool: 'none',
   isDragging: false,
   draggedPointId: null,
+  draggedAngleLabelId: null,
 };
 
 export function useMeasurement() {
@@ -173,6 +174,23 @@ export function useMeasurement() {
     setState(prev => ({ ...prev, activeTool: tool, points: [] }));
   }, []);
 
+  const startAngleLabelDrag = useCallback((measurementId: string) => {
+    setState(prev => ({ ...prev, draggedAngleLabelId: measurementId }));
+  }, []);
+
+  const endAngleLabelDrag = useCallback(() => {
+    setState(prev => ({ ...prev, draggedAngleLabelId: null }));
+  }, []);
+
+  const moveAngleLabel = useCallback((measurementId: string, x: number, y: number) => {
+    setState(prev => ({
+      ...prev,
+      measurements: prev.measurements.map(m =>
+        m.id === measurementId ? { ...m, labelX: x, labelY: y } : m
+      ),
+    }));
+  }, []);
+
   const clearAll = useCallback(() => {
     saveHistory({
       type: 'clear_all',
@@ -226,6 +244,9 @@ export function useMeasurement() {
     startDrag,
     endDrag,
     setActiveTool,
+    startAngleLabelDrag,
+    endAngleLabelDrag,
+    moveAngleLabel,
     clearAll,
     undo,
     redo,
