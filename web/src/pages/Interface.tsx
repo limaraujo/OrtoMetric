@@ -44,10 +44,10 @@ export default function App() {
   } = useImageCanvas(state.isDragging || !!state.draggedAngleLabelId)
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background">
       <Header />
 
-      <main className="flex-1 flex flex-row gap-4 p-4 max-w-screen-2xl mx-auto w-full">
+      <main className="flex-1 flex gap-4 p-4 max-w-screen-2xl mx-auto w-full min-h-0">
 
         <div className="flex-1 flex flex-col gap-4">
 
@@ -98,7 +98,7 @@ export default function App() {
 
         </div>
 
-        <ResultsSidebar 
+        <ResultsSidebar
           measurements={state.measurements}
         />
 

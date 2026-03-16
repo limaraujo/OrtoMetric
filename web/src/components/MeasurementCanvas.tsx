@@ -6,7 +6,7 @@ const POINT_RADIUS = 8;
 const POINT_BORDER = 2;
 
 const ANGLE_LABEL_COLOR = "hsl(48,96%,53%)";
-const ANGLE_LABEL_HIT_THRESHOLD = 50;
+const ANGLE_LABEL_HIT_THRESHOLD = 14;
 
 interface MeasurementCanvasProps {
   points: Point[];
@@ -139,7 +139,7 @@ export function MeasurementCanvas({
       const dx = end.x - start.x;
       const dy = end.y - start.y;
       const len = Math.sqrt(dx * dx + dy * dy);
-      const extendFactor = 500 / len;
+      const extendFactor = 100 / len;
       drawLine(
         { x: start.x - dx * extendFactor, y: start.y - dy * extendFactor },
         { x: end.x   + dx * extendFactor, y: end.y   + dy * extendFactor },

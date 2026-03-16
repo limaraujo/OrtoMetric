@@ -152,6 +152,10 @@ export function CanvasBoard({
             onStartPan(e)
           }
 
+          if(e.button === 0) {
+            onStartPan(e)
+          }
+
           // botão do meio sempre faz pan
           if (e.button === 1) {
             onStartPan(e)
