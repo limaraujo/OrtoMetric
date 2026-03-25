@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Header } from '../components/Header'
 import { Toolbar } from '../components/Toolbar'
 import { useMeasurement } from '../hooks/useMeasurement'
@@ -6,6 +8,15 @@ import { CanvasBoard } from '../components/CanvasBoard'
 import { ResultsSidebar } from '../components/ResultsSidebar'
 
 export default function App() {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const token = sessionStorage.getItem("access_token")
+    if (!token) {
+      navigate("/login")
+    }
+  }, [navigate])
+
   const {
     state,
     addPoint,
