@@ -1,4 +1,5 @@
 import os
+import logging
 
 from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
@@ -8,10 +9,19 @@ from extensions.db import db
 
 app = Flask(__name__)
 
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+env_mode = os.getenv("FLASK_ENV", "development")
+if env_mode == "production" and not os.getenv("JWT_SECRET_KEY"):
+    raise ValueError("JWT_SECRET_KEY must be set in production environment")
+
 app.config['JWT_SECRET_KEY'] = os.getenv(
     'JWT_SECRET_KEY',
-    'dev-only-jwt-secret-key-with-32-plus-bytes'
+    'dev-only-jwt-secret-key-with-32-plus-bytes' if env_mode != "production" else None
 )
 
 db.init_app(app)
@@ -35,4 +45,5 @@ def home():
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "5000"))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    debug_mode = os.getenv("FLASK_DEBUG", "False").lower() == "true"
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)

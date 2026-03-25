@@ -1,29 +1,91 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { isAxiosError } from "axios";
 import api from "../lib/api";
 import { AuthForm } from "../components/AuthForm";
-import type { AuthMode, LoginResponse } from "../types/auth";
+import type { AuthFormData, AuthMode, LoginResponse } from "../types/auth";
 
 export default function AuthContainer() {
   const [mode, setMode] = useState<AuthMode>("login");
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<AuthFormData>({
     username: "",
     email: "",
     password: "",
   });
 
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof AuthFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navigate = useNavigate();
 
-  const handleChange = (field: string, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value } as typeof form));
+  const handleChange = (field: keyof AuthFormData, value: string) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    setFieldErrors(prev => ({ ...prev, [field]: "" }));
+  };
+
+  const validateForm = () => {
+    const nextErrors: Partial<Record<keyof AuthFormData, string>> = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (mode === "register" && form.username.trim().length < 3) {
+      nextErrors.username = "Usuario deve ter ao menos 3 caracteres.";
+    }
+
+    if (!emailRegex.test(form.email)) {
+      nextErrors.email = "Email invalido.";
+    }
+
+    if (form.password.length < 8) {
+      nextErrors.password = "Senha deve ter ao menos 8 caracteres.";
+    }
+
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const parseApiError = (err: unknown, isRegisterMode: boolean) => {
+    if (!isAxiosError(err)) {
+      return "Erro inesperado. Tente novamente.";
+    }
+
+    if (!err.response) {
+      return "Nao foi possivel conectar ao servidor. Verifique se a API esta online.";
+    }
+
+    const status = err.response.status;
+    const data = err.response.data as { error?: unknown } | undefined;
+
+    if (status === 401) {
+      return "Email ou senha invalidos.";
+    }
+
+    if (status === 400) {
+      if (Array.isArray(data?.error)) {
+        return "Dados invalidos. Revise os campos informados.";
+      }
+      if (typeof data?.error === "string") {
+        return data.error;
+      }
+      return isRegisterMode
+        ? "Nao foi possivel cadastrar com os dados informados."
+        : "Nao foi possivel fazer login com os dados informados.";
+    }
+
+    if (status >= 500) {
+      return "Servidor indisponivel no momento. Tente novamente em instantes.";
+    }
+
+    return "Erro na autenticacao. Tente novamente.";
   };
 
   const handleSubmit = async () => {
     setError("");
+    if (!validateForm()) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -40,8 +102,8 @@ export default function AuthContainer() {
       sessionStorage.setItem("user", JSON.stringify(data.user));
 
       navigate("/");
-    } catch {
-      setError("Ocorreu um erro. Verifique suas credenciais ou tente novamente mais tarde.");
+    } catch (err) {
+      setError(parseApiError(err, mode === "register"));
     } finally {
       setIsSubmitting(false);
     }
@@ -57,6 +119,7 @@ export default function AuthContainer() {
           mode={mode}
           form={form}
           error={error}
+          fieldErrors={fieldErrors}
           isSubmitting={isSubmitting}
           onChange={handleChange}
           onSubmit={handleSubmit}

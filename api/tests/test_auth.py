@@ -20,19 +20,20 @@ def create_user_and_get_token(client):
     suffix = uuid4().hex[:8]
     username = f"test-{suffix}"
     email = f"{username}@test.com"
+    password = "TestPass@123"  # ✅ Senha válida: maiúscula, minúscula, número, especial
 
     # register
     res = client.post("/auth/register", json={
         "username": username,
         "email": email,
-        "password": "123456"
+        "password": password
     })
     assert res.status_code == 201
 
     # login
     res = client.post("/auth/login", json={
         "email": email,
-        "password": "123456"
+        "password": password
     })
     data = res.get_json()
     assert "access_token" in data
@@ -44,11 +45,12 @@ def test_register(client):
     suffix = uuid4().hex[:8]
     username = f"test-{suffix}"
     email = f"{username}@test.com"
+    password = "SecurePass@456"  # ✅ Senha válida
 
     res = client.post("/auth/register", json={
         "username": username,
         "email": email,
-        "password": "123456"
+        "password": password
     })
 
     assert res.status_code == 201

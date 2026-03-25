@@ -1,58 +1,47 @@
-# OrtoMetric — Arquitetura e Fluxo Detalhado
+# OrtoMetric - Arquitetura e Fluxo
 
-Este documento descreve a arquitetura do frontend (web) e o fluxo de dados e eventos de ponta a ponta.
+Este documento descreve a arquitetura atual do frontend e backend, com foco no fluxo de autenticacao e medicao.
 
 ---
 
-## 1. Fluxo de entrada da aplicação
+## 1. Fluxo de entrada da aplicacao
 
-```
+```text
 index.html
-    │
-    └─► <script type="module" src="/src/main.tsx">
-            │
-            ▼
-        main.tsx
-            │  createRoot(#root).render(
-            │    StrictMode >
-            │      BrowserRouter >
-            │        App
-            │  )
-            ▼
-        App.tsx (react-router)
-            │  <Routes>
-            │    <Route path="/" element={<Interface />} />
-            ▼
-        pages/Interface.tsx  ← ÚNICA PÁGINA / ORQUESTRADOR
-            │
-            ├─► useMeasurement()     → estado de medições + callbacks
-            ├─► useImageCanvas(...)  → imagem, transform, pan/zoom + callbacks
-            │
-            └─► Renderiza:
-                    Header
-                    Toolbar (recebe estado + callbacks dos 2 hooks)
-                    CanvasBoard (idem)
-                    ResultsSidebar (só measurements)
-                    Footer
+  -> main.tsx
+  -> App.tsx (router)
+      -> /login -> AuthContainer
+      -> /      -> Interface
 ```
 
-**Resumo:** Toda a lógica de estado vive em dois hooks na **Interface**. A Interface não implementa regras de negócio; apenas repassa estado e callbacks para os componentes.
+Resumo:
+
+- `AuthContainer` orquestra login/cadastro.
+- `Interface` orquestra medicao e canvas.
 
 ---
 
-## 2. Visão geral da arquitetura (camadas)
+## 2. Visao geral por camadas
 
 ```mermaid
 flowchart TB
     subgraph Entry
         A[index.html] --> B[main.tsx]
         B --> C[App.tsx Router]
-        C --> D[Interface]
+        C --> D1[AuthContainer]
+        C --> D2[Interface]
     end
 
-    subgraph Page["Interface (página)"]
-        D --> H1[useMeasurement]
-        D --> H2[useImageCanvas]
+    subgraph AuthPage["AuthContainer"]
+        D1 --> AF[AuthForm]
+        AF --> AS[AuthSwitch]
+        AF --> IF[InputField]
+        D1 --> API[lib/api.ts]
+    end
+
+    subgraph MeasurePage["Interface"]
+        D2 --> H1[useMeasurement]
+        D2 --> H2[useImageCanvas]
         H1 --> state1[points, measurements, activeTool, isDragging]
         H2 --> state2[image, transform, isPanning]
     end
@@ -64,10 +53,10 @@ flowchart TB
         HD[Header]
     end
 
-    D --> HD
-    D --> T
-    D --> CB
-    D --> RS
+    D2 --> HD
+    D2 --> T
+    D2 --> CB
+    D2 --> RS
 
     state1 --> T
     state1 --> CB
@@ -83,9 +72,44 @@ flowchart TB
 
 ---
 
-## 3. Fluxo por domínio
+## 3. Fluxo de autenticacao (frontend -> backend)
 
-### 3.1 Carregar imagem
+```text
+Usuario envia formulario (AuthForm)
+    -> AuthContainer valida campos locais
+    -> POST /auth/register (se modo cadastro)
+    -> POST /auth/login
+    -> salva access_token em sessionStorage
+    -> redireciona para /
+```
+
+Backend:
+
+```text
+routes/auth.py
+    -> schemas/user_schema.py (validacao)
+    -> services/user_service.py (regra de negocio)
+    -> models/user.py (persistencia)
+```
+
+Erros:
+
+- 400 payload invalido
+- 401 credenciais invalidas
+- 500 erro interno
+
+Logs:
+
+- `register_success`
+- `register_failed`
+- `login_success`
+- `login_failed`
+
+---
+
+## 4. Fluxo de medicao
+
+### 4.1 Carregar imagem
 
 ```mermaid
 sequenceDiagram
@@ -109,7 +133,7 @@ sequenceDiagram
 
 ---
 
-### 3.2 Pan (arrastar a imagem com o mouse)
+### 4.2 Pan (arrastar a imagem com o mouse)
 
 ```mermaid
 sequenceDiagram
@@ -138,7 +162,7 @@ sequenceDiagram
 
 ---
 
-### 3.3 Zoom (roda do mouse)
+### 4.3 Zoom (roda do mouse)
 
 ```mermaid
 sequenceDiagram
@@ -159,7 +183,7 @@ sequenceDiagram
 
 ---
 
-### 3.4 Zoom por pinch (toque com dois dedos)
+### 4.4 Zoom por pinch (toque com dois dedos)
 
 ```mermaid
 sequenceDiagram
@@ -190,7 +214,7 @@ sequenceDiagram
 
 ---
 
-### 3.5 Medição de Cobb (4 pontos → ângulo)
+### 4.5 Medicao de Cobb (4 pontos -> angulo)
 
 ```mermaid
 sequenceDiagram
@@ -223,7 +247,7 @@ sequenceDiagram
 
 ---
 
-### 3.6 Arrastar um ponto (mover P1–P4 ou ponto de medição já salva)
+### 4.6 Arrastar ponto de medicao
 
 ```mermaid
 sequenceDiagram
@@ -253,7 +277,7 @@ sequenceDiagram
 
 ---
 
-### 3.7 Undo / Redo
+### 4.7 Undo / Redo
 
 ```mermaid
 flowchart LR
@@ -284,10 +308,15 @@ flowchart LR
 
 ---
 
-## 4. Onde cada coisa vive
+## 5. Onde cada coisa vive
 
-| O quê | Onde |
+| Item | Onde |
 |------|------|
+| Estado de auth (modo/formulario/erros) | `pages/AuthContainer.tsx` |
+| Formulario de auth | `components/AuthForm.tsx` |
+| Switch login/cadastro | `components/ui/AuthSwitch.tsx` |
+| Campo reutilizavel | `components/ui/InputField.tsx` |
+| Cliente HTTP com token | `lib/api.ts` |
 | Pontos atuais (0–4) e medições de Cobb | `useMeasurement` → `state.points`, `state.measurements` |
 | Ferramenta ativa, isDragging, draggedPointId | `useMeasurement` → `state` |
 | Imagem (data URL) | `useImageCanvas` → `image` |
@@ -300,9 +329,9 @@ flowchart LR
 
 ---
 
-## 5. Resumo do fluxo de dados (uma linha)
+## 6. Resumo do fluxo de dados
 
-```
+```text
 Usuário → CanvasBoard / Toolbar / MeasurementCanvas
     → callbacks (onAddPoint, loadImage, startPan, …)
     → useMeasurement / useImageCanvas
@@ -311,4 +340,4 @@ Usuário → CanvasBoard / Toolbar / MeasurementCanvas
     → novos props para os mesmos componentes
 ```
 
-Nenhum componente filho guarda “dono” do estado de medição ou da imagem; tudo sobe para a **Interface** via hooks e desce via props.
+No auth, o mesmo principio vale: `AuthContainer` concentra estado e os componentes de UI apenas recebem props.
