@@ -53,7 +53,7 @@ export function Toolbar({
   canRedo,
 }: ToolbarProps) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-2 shadow-sm">
+    <div className="clinical-card flex items-center gap-3 !rounded-xl !bg-card/90 !p-2">
 
       <div className="flex items-center gap-2">
         <button

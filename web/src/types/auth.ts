@@ -7,6 +7,11 @@ export type AuthFormProps = {
     onChange: (value: string) => void;
     type?: string;
     error?: string;
+    required?: boolean;
+    placeholder?: string;
+    containerClassName?: string;
+    labelClassName?: string;
+    inputClassName?: string;
 };
 
 export type AuthFormData = {

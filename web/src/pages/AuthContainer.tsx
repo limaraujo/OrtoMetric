@@ -110,9 +110,8 @@ export default function AuthContainer() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
-      <div className="pointer-events-none absolute -top-28 left-1/2 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-cyan-400/20 blur-3xl" />
-      <div className="pointer-events-none absolute -right-24 bottom-[-5rem] h-[22rem] w-[22rem] rounded-full bg-emerald-300/20 blur-3xl" />
+    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+      <div className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(circle_at_top,hsl(var(--primary)/0.34),transparent_40%),radial-gradient(circle_at_bottom_right,hsl(var(--primary)/0.22),transparent_35%)]" />
 
       <main className="relative mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-8">
         <AuthForm

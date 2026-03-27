@@ -20,43 +20,43 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 221 39% 11%;
+    --foreground: 210 40% 96%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 221 34% 15%;
+    --card-foreground: 210 40% 96%;
 
-    --border: 214.3 31.8% 91.4%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --input: 214.3 31.8% 91.4%;
-    --destructive: 0 84.2% 60.2%;
-    --canvas-bg: 210 40% 98%;
+    --border: 218 27% 24%;
+    --secondary: 219 29% 19%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 218 30% 18%;
+    --primary: 211 100% 56%;
+    --primary-foreground: 222 47% 11%;
+    --input: 219 24% 19%;
+    --destructive: 0 74% 58%;
+    --canvas-bg: 221 40% 13%;
 
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215 18% 71%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 221 42% 8%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 221 35% 12%;
     --card-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --secondary: 217.2 32.6% 17.5%;
+    --border: 218 29% 20%;
+    --secondary: 218 29% 17%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --input: 217.2 32.6% 17.5%;
-    --destructive: 0 62.8% 30.6%;
-    --canvas-bg: 222.2 84% 7%;
+    --muted: 218 30% 16%;
+    --primary: 211 100% 58%;
+    --primary-foreground: 222 47% 11%;
+    --input: 218 24% 17%;
+    --destructive: 0 66% 46%;
+    --canvas-bg: 221 42% 10%;
 
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted-foreground: 215 16% 73%;
   }
 
   body {
@@ -70,16 +70,13 @@
   .toolbar-divider {
     width: 1px;
     height: 2rem;
-    background-color: rgb(209 213 219);
+    background-color: hsl(var(--border));
     margin: 0.5rem;
   }
 
   /* BASE */
   .clinical-button {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 font-medium
-           transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50
-           focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50
-           disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:pointer-events-none;
   }
 
   /* VARIANTES */
@@ -97,9 +94,7 @@
   }
 
   .clinical-button-icon {
-    @apply inline-flex items-center justify-center rounded-lg p-2.5 transition-all duration-200
-           hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/50
-           disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center rounded-lg p-2.5 transition-all duration-200 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .clinical-card {
@@ -107,16 +102,11 @@
   }
 
   .clinical-input {
-    @apply w-full rounded-lg border border-border bg-input px-3 py-2 text-foreground
-           placeholder:text-muted-foreground focus:outline-none focus:ring-2
-           focus:ring-primary/50 focus:border-primary transition-all duration-200;
+    @apply w-full rounded-lg border border-border bg-input px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200;
   }
 
   .measurement-marker {
-    @apply absolute w-6 h-6 -translate-x-1/2 -translate-y-1/2 rounded-full
-           bg-destructive border-2 border-white flex items-center justify-center
-           text-[10px] font-bold text-white cursor-move shadow-lg z-10
-           transition-transform duration-150 hover:scale-110;
+    @apply absolute w-6 h-6 -translate-x-1/2 -translate-y-1/2 rounded-full bg-destructive border-2 border-white flex items-center justify-center text-[10px] font-bold text-white cursor-move shadow-lg z-10 transition-transform duration-150 hover:scale-110;
   }
 
   .canvas-container {

@@ -7,12 +7,12 @@ export function AuthForm(props: AuthForm) {
   const { mode, form, error, fieldErrors, isSubmitting, onChange, onSubmit, onSwitchMode } = props;
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="w-full rounded-3xl border border-white/20 bg-slate-900/70 p-6 shadow-2xl shadow-cyan-950/40 backdrop-blur">
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="w-full rounded-3xl border border-border bg-card/90 p-6 shadow-2xl shadow-primary/20 backdrop-blur">
       <div className="mb-6">
-        <h2 className="text-3xl font-black tracking-tight text-white mb-2">
+        <h2 className="mb-2 text-3xl font-black tracking-tight text-foreground">
           {mode === "login" ? "Bem-vindo" : "Crie sua conta"}
         </h2>
-        <p className="text-sm text-slate-300 mb-4">
+        <p className="mb-4 text-sm text-muted-foreground">
           {mode === "login"
             ? "Faça login para continuar"
             : "Cadastre-se para começar"}
@@ -50,14 +50,14 @@ export function AuthForm(props: AuthForm) {
         />
 
         {error && (
-          <p className="rounded-lg border border-rose-300/30 bg-rose-400/10 px-3 py-2 text-sm text-rose-200">
+          <p className="rounded-lg border border-destructive/35 bg-destructive/15 px-3 py-2 text-sm text-red-200">
             {error}
           </p>
         )}
 
         <button
           disabled={isSubmitting}
-          className="mt-2 w-full rounded-xl bg-gradient-to-r from-cyan-300 to-emerald-300 px-4 py-3 text-sm font-black uppercase tracking-wide text-slate-900 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+          className="clinical-button clinical-button-primary mt-2 w-full justify-center py-3 text-sm font-black uppercase tracking-wide"
         >
           {isSubmitting ? "Processando..." : mode === "login" ? "Entrar" : "Criar conta"}
         </button>

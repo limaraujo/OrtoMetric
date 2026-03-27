@@ -12,20 +12,20 @@ export function ResultsSidebar({ measurements }: ResultsSidebarProps) {
     <div className="w-72 shrink-0 flex flex-col min-h-0">
       <div className="clinical-card flex flex-col flex-1 min-h-0 space-y-4">
         <Ruler className='w-5 h-5 text-primary' />
-        <h2 className="text-lg font-semibold">Resultados</h2>
+        <h2 className="text-lg font-semibold text-foreground">Resultados</h2>
 
         <div className='flex-1 space-y-3 overflow-y-auto pr-1 min-h-0'>
           {measurements.map((m, index) => {
             return (
               <div
                 key={m.id}
-                className="p-3 rounded-lg bg-secondary/50 border border-border animate-slide-in-right"
+                className="rounded-lg border border-border bg-secondary/40 p-3 transition hover:border-primary/35"
               >
                 <span className='text-sm font-medium'>
                   Ângulo de Cobb #{index + 1}:
                 </span>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-gradient">
+                  <span className="text-3xl font-black text-primary">
                     {m.angle.toFixed(1)}
                   </span>
                   <span className="text-lg text-muted-foreground">°</span>

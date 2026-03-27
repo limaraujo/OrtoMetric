@@ -52,3 +52,7 @@ obj/
 tmp/
 temp/
 *.tmp
+
+# documentacao de acompanhamento
+
+docs/

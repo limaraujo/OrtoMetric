@@ -6,6 +6,7 @@ import { useMeasurement } from '../hooks/useMeasurement'
 import { useImageCanvas } from '../hooks/useImageCanvas'
 import { CanvasBoard } from '../components/CanvasBoard'
 import { ResultsSidebar } from '../components/ResultsSidebar'
+import api from '../lib/api'
 
 export default function App() {
   const navigate = useNavigate()
@@ -14,7 +15,20 @@ export default function App() {
     const token = sessionStorage.getItem("access_token")
     if (!token) {
       navigate("/login")
+      return
     }
+
+    const verifySession = async () => {
+      try {
+        await api.get('/auth/me')
+      } catch {
+        sessionStorage.removeItem('access_token')
+        sessionStorage.removeItem('user')
+        navigate('/login')
+      }
+    }
+
+    void verifySession()
   }, [navigate])
 
   const {

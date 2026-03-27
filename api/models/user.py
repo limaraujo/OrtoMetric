@@ -2,13 +2,26 @@ from extensions.db import db
 from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(db.Model):
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(120), nullable=False)
-
+    
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
+    
+    # Relationships
+    
+    # - Annotations created by the user
+    annotations = db.relationship('Annotation', back_populates='created_by')
+    
+    measurements = db.relationship('Measurement', back_populates='measured_by')
+    
+    reports = db.relationship('Report', back_populates='medical_user')
+    
+    audit_logs = db.relationship('AuditLog', back_populates='user')
+    

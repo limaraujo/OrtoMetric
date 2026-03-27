@@ -1,9 +1,25 @@
 import type { AuthFormProps } from "../../types/auth";
 
-export default function InputField({ id, label, value, onChange, type = "text", error }: AuthFormProps) {
+export default function InputField({
+    id,
+    label,
+    value,
+    onChange,
+    type = "text",
+    error,
+    required = true,
+    placeholder,
+    containerClassName,
+    labelClassName,
+    inputClassName,
+}: AuthFormProps) {
+    const resolvedPlaceholder = placeholder ?? `Digite seu ${label.toLowerCase()}`
+    const resolvedLabelClassName = labelClassName ?? "mb-1 block text-sm font-semibold text-foreground"
+    const resolvedInputClassName = inputClassName ?? "clinical-input"
+
     return (
-        <div>
-            <label htmlFor={id} className="mb-1 block text-sm font-semibold text-slate-200">
+        <div className={containerClassName}>
+            <label htmlFor={id} className={resolvedLabelClassName}>
                 {label}
             </label>
             <input
@@ -11,11 +27,11 @@ export default function InputField({ id, label, value, onChange, type = "text", 
                 type={type}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                required
-                className="block w-full rounded-xl border border-white/20 bg-white/5 px-3 py-3 text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300/40"
-                placeholder={`Digite seu ${label.toLowerCase()}`}
+                required={required}
+                className={resolvedInputClassName}
+                placeholder={resolvedPlaceholder}
             />
-            {error && <p className="mt-1 text-xs text-rose-300">{error}</p>}
+            {error && <p className="mt-1 text-xs text-red-300">{error}</p>}
         </div>
     )
 }

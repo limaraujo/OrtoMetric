@@ -1,8 +1,10 @@
 import logging
 
 from flask import Blueprint, request, jsonify
+from flask_limiter.errors import RateLimitExceeded
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from pydantic import ValidationError
+from extensions.limiter import limiter
 from schemas.user_schema import UserCreate, UserResponse, UserLogin
 from services.user_service import create_user, login_user
 from services.exceptions import UserAlreadyExistsError, InvalidCredentialsError
@@ -15,6 +17,12 @@ logger = logging.getLogger(__name__)
 def _validation_error_response(err: ValidationError):
     logger.info("payload_validation_failed")
     return jsonify({"error": err.errors()}), 400
+
+
+@auth_bp.errorhandler(RateLimitExceeded)
+def handle_rate_limit_exceeded(_err: RateLimitExceeded):
+    logger.warning("rate_limit_exceeded endpoint=auth")
+    return jsonify({"error": "Too many login attempts. Try again later."}), 429
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
@@ -42,6 +50,7 @@ def register():
     ).model_dump(), 201
     
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit("5 per minute")
 def login():
     payload = request.get_json(silent=True) or {}
     try: 
