@@ -101,7 +101,7 @@ export default function AuthContainer() {
       sessionStorage.setItem("access_token", data.access_token);
       sessionStorage.setItem("user", JSON.stringify(data.user));
 
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       setError(parseApiError(err, mode === "register"));
     } finally {

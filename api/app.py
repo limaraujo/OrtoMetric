@@ -6,7 +6,6 @@ from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from routes.auth import auth_bp
-from routes.registry import registry_bp
 from extensions.db import db
 from extensions.limiter import limiter
 import models
@@ -43,7 +42,6 @@ frontend_origins = os.getenv(
 CORS(app, origins=[origin.strip() for origin in frontend_origins.split(",") if origin.strip()])
 
 app.register_blueprint(auth_bp, url_prefix="/auth")
-app.register_blueprint(registry_bp, url_prefix="/registry")
 
 @app.route("/")
 def home():

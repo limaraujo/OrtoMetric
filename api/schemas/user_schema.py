@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=80)
@@ -27,3 +27,14 @@ class UserResponse(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class UserUpdate(BaseModel):
+    username: str | None = Field(default=None, min_length=3, max_length=80)
+    email: EmailStr | None = None
+
+    @model_validator(mode='after')
+    def validate_has_at_least_one_field(self):
+        if self.username is None and self.email is None:
+            raise ValueError('Pelo menos um campo deve ser informado')
+        return self

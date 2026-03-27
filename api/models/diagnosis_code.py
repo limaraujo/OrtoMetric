@@ -7,6 +7,3 @@ class DiagnosisCode(db.Model):
     code = db.Column(db.String(20), unique=True, nullable=False)
     system = db.Column(db.String(50), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    
-    
-    report_diagnoses = db.relationship('ReportDiagnosis', back_populates='diagnosis_code')

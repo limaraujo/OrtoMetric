@@ -16,12 +16,7 @@ class User(db.Model):
     
     # Relationships
     
-    # - Annotations created by the user
-    annotations = db.relationship('Annotation', back_populates='created_by')
-    
-    measurements = db.relationship('Measurement', back_populates='measured_by')
-    
-    reports = db.relationship('Report', back_populates='medical_user')
-    
+    # - Annotations created by the user    
+    measurements = db.relationship('Measurement', back_populates='measured_by')    
     audit_logs = db.relationship('AuditLog', back_populates='user')
     

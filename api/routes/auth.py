@@ -5,7 +5,9 @@ from flask_limiter.errors import RateLimitExceeded
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from pydantic import ValidationError
 from extensions.limiter import limiter
-from schemas.user_schema import UserCreate, UserResponse, UserLogin
+from schemas.user_schema import UserCreate, UserResponse, UserLogin, UserUpdate
+from models.user import User
+from extensions.db import db
 from services.user_service import create_user, login_user
 from services.exceptions import UserAlreadyExistsError, InvalidCredentialsError
 
@@ -85,3 +87,62 @@ def me():
     logger.info("me_access user_id=%s", user_id)
 
     return {"user_id": user_id}
+
+
+@auth_bp.route("/profile", methods=["GET"])
+@jwt_required()
+def get_profile():
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+
+    if not user:
+        logger.info("profile_not_found user_id=%s", user_id)
+        return jsonify({"error": "User not found"}), 404
+
+    logger.info("profile_read_success user_id=%s", user_id)
+    return UserResponse(id=user.id, username=user.username, email=user.email).model_dump(), 200
+
+
+@auth_bp.route("/profile", methods=["PUT"])
+@jwt_required()
+def update_profile():
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+
+    if not user:
+        logger.info("profile_update_not_found user_id=%s", user_id)
+        return jsonify({"error": "User not found"}), 404
+
+    payload = request.get_json(silent=True) or {}
+
+    try:
+        data = UserUpdate(**payload)
+    except ValidationError as e:
+        return _validation_error_response(e)
+
+    if data.username is not None and data.username != user.username:
+        username_in_use = User.query.filter(
+            User.username == data.username,
+            User.id != user.id,
+        ).first()
+
+        if username_in_use:
+            logger.info("profile_update_conflict user_id=%s field=username", user_id)
+            return jsonify({"error": "Username already exists"}), 400
+        user.username = data.username
+
+    if data.email is not None and data.email != user.email:
+        email_in_use = User.query.filter(
+            User.email == data.email,
+            User.id != user.id,
+        ).first()
+
+        if email_in_use:
+            logger.info("profile_update_conflict user_id=%s field=email", user_id)
+            return jsonify({"error": "Email already exists"}), 400
+        user.email = data.email
+
+    db.session.commit()
+    logger.info("profile_update_success user_id=%s", user_id)
+
+    return UserResponse(id=user.id, username=user.username, email=user.email).model_dump(), 200
