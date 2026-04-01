@@ -15,6 +15,7 @@ export function CanvasBoard({
   isDraggingAngleLabel,
   points,
   measurements,
+  distanceCalibration,
   onAddPoint,
   onMovePoint,
   onStartDrag,
@@ -22,6 +23,8 @@ export function CanvasBoard({
   onMoveAngleLabel,
   onStartAngleLabelDrag,
   onEndAngleLabelDrag,
+  onUpdateMeasurementStyle,
+  onUpdateMeasurementLabelFontSize,
   onLoadImage,
   onStartPan,
   onUpdatePan,
@@ -152,7 +155,7 @@ export function CanvasBoard({
             onStartPan(e)
           }
 
-          if(e.button === 0) {
+          if (e.button === 0) {
             onStartPan(e)
           }
 
@@ -178,10 +181,10 @@ export function CanvasBoard({
           cursor: isDragging
             ? "grabbing"
             : isPanning
-            ? "grabbing"
-            : activeTool === "pan"
-            ? "grab"
-            : "default",
+              ? "grabbing"
+              : activeTool === "pan"
+                ? "grab"
+                : "default",
           touchAction: "none",
           overscrollBehavior: "contain",
         }}
@@ -206,17 +209,18 @@ export function CanvasBoard({
         <MeasurementCanvas
           points={points}
           measurements={measurements}
+          distanceCalibration={distanceCalibration}
           activeTool={activeTool}
           zoom={transform.zoom}
           panX={transform.panX}
           panY={transform.panY}
           cursor={
             isDragging ? "grabbing"
-            : isDraggingAngleLabel ? "grabbing"
-            : isPanning ? "grabbing"
-            : activeTool === "pan" ? "grab"
-            : activeTool === "cobb" && points.length < 4 ? "crosshair"
-            : "default"
+              : isDraggingAngleLabel ? "grabbing"
+                : isPanning ? "grabbing"
+                  : activeTool === "pan" ? "grab"
+                    : (activeTool === "angle" || activeTool === "distance") ? "crosshair"
+                      : "default"
           }
           onAddPoint={onAddPoint}
           onMovePoint={onMovePoint}
@@ -225,6 +229,8 @@ export function CanvasBoard({
           onMoveAngleLabel={onMoveAngleLabel}
           onStartAngleLabelDrag={onStartAngleLabelDrag}
           onEndAngleLabelDrag={onEndAngleLabelDrag}
+          onUpdateMeasurementStyle={onUpdateMeasurementStyle}
+          onUpdateMeasurementLabelFontSize={onUpdateMeasurementLabelFontSize}
         />
       </div>
 

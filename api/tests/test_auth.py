@@ -15,8 +15,8 @@ def client():
         yield client
 
 
-# 🔹 helper para evitar repetição
-def create_user_and_get_token(client):
+# Helper para evitar repetição
+def create_user_and_login(client):
     suffix = uuid4().hex[:8]
     username = f"test-{suffix}"
     email = f"{username}@test.com"
@@ -35,10 +35,8 @@ def create_user_and_get_token(client):
         "email": email,
         "password": password
     })
-    data = res.get_json()
-    assert "access_token" in data
-
-    return data["access_token"]
+    assert res.status_code == 200
+    return res
 
 
 def test_register(client):
@@ -57,18 +55,40 @@ def test_register(client):
 
 
 def test_login(client):
-    token = create_user_and_get_token(client)
-    assert token is not None
+    res = create_user_and_login(client)
+    assert res.status_code == 200
+    assert client.get_cookie("access_token_cookie") is not None
+    assert client.get_cookie("refresh_token_cookie") is not None
 
 
 def test_protected_route(client):
-    token = create_user_and_get_token(client)
+    create_user_and_login(client)
 
-    res = client.get("/auth/me", headers={
-        "Authorization": f"Bearer {token}"
-    })
+    res = client.get("/auth/me")
 
     assert res.status_code == 200
+
+
+def test_refresh_route(client):
+    create_user_and_login(client)
+    csrf_refresh = client.get_cookie("csrf_refresh_token")
+
+    res = client.post(
+        "/auth/refresh",
+        json={},
+        headers={"X-CSRF-TOKEN": csrf_refresh.value if csrf_refresh else ""},
+    )
+
+    assert res.status_code == 200
+
+
+def test_logout_clears_session(client):
+    create_user_and_login(client)
+    res = client.post("/auth/logout", json={})
+    assert res.status_code == 200
+
+    me_res = client.get("/auth/me")
+    assert me_res.status_code == 401
 
 
 def test_invalid_login(client):

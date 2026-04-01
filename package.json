@@ -7,8 +7,12 @@
     "api"
   ],
   "dependencies": {
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-toggle-group": "^1.1.11",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "@tailwindcss/vite": "^4.1.18",
     "date-fns": "^4.1.0",
+    "radix-ui": "^1.4.3",
     "react-router-dom": "^7.13.1",
     "tailwindcss": "^4.1.18"
   }

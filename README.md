@@ -96,6 +96,7 @@ pytest -q
 - [docs/SECURITY.md](docs/SECURITY.md)
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - [docs/ARQUITETURA-E-FLUXO.md](docs/ARQUITETURA-E-FLUXO.md)
+- [docs/ARQUITETURA-SEGURANCA-DEPLOY.md](docs/ARQUITETURA-SEGURANCA-DEPLOY.md)
 
 ## Estado Atual
 

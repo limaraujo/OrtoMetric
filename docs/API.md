@@ -1,19 +1,17 @@
-# API Reference
+# API
 
-Base URL local: `http://localhost:5000`
+Base local: `http://localhost:5000`
 
-## Health/Home
+## Health
 
 ### GET /
 
-Retorna mensagem simples de disponibilidade.
+Retorna uma mensagem simples de disponibilidade.
 
-Resposta 200:
+Resposta:
 
 ```json
-{
-  "message": "Welcome to the API!"
-}
+{ "message": "Welcome to the API!" }
 ```
 
 ## Auth
@@ -32,85 +30,52 @@ Body:
 }
 ```
 
-Regras de senha:
-- minimo 8 caracteres
-- 1 maiuscula
-- 1 minuscula
-- 1 numero
-- 1 simbolo
-
-Resposta 201:
-
-```json
-{
-  "id": 1,
-  "username": "usuario",
-  "email": "user@example.com"
-}
-```
-
-Erros:
-- 400 validacao invalida
-- 400 email ja existente
-- 500 erro interno
-
 ### POST /auth/login
 
-Autentica usuario e retorna JWT.
+Autentica usuario e devolve a informacao basica do perfil. Os tokens sao enviados em cookies.
 
-Body:
+### POST /auth/refresh
 
-```json
-{
-  "email": "user@example.com",
-  "password": "Senha@123"
-}
-```
+Renova o access token usando o refresh token.
 
-Resposta 200:
+### POST /auth/logout
 
-```json
-{
-  "user": {
-    "id": 1,
-    "username": "usuario",
-    "email": "user@example.com"
-  },
-  "access_token": "<jwt>"
-}
-```
-
-Erros:
-- 400 payload invalido
-- 401 credenciais invalidas
-- 500 erro interno
+Remove os cookies de sessao.
 
 ### GET /auth/me
 
-Rota protegida.
+Rota protegida para validar a sessao atual.
 
-Header:
+### GET /auth/profile
 
-```http
-Authorization: Bearer <access_token>
-```
+Retorna o perfil do usuario autenticado.
 
-Resposta 200:
+### PUT /auth/profile
 
-```json
-{
-  "user_id": "1"
-}
-```
+Atualiza username e/ou email.
 
-## Exemplo rapido com curl
+## Measurement types
+
+### GET /measurement-types
+
+Lista os tipos de medicao do usuario, incluindo padroes e customizacoes.
+
+### PUT /measurement-types/sync
+
+Sincroniza a lista completa de tipos de medicao.
+
+### GET /measurement-types/active
+
+Le o tipo de medicao ativo.
+
+### PUT /measurement-types/active
+
+Atualiza o tipo de medicao ativo.
+
+## Exemplo rapido
 
 ```bash
 curl -X POST http://localhost:5000/auth/register \
   -H "Content-Type: application/json" \
   -d '{"username":"dev","email":"dev@example.com","password":"Senha@123"}'
-
-curl -X POST http://localhost:5000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"dev@example.com","password":"Senha@123"}'
 ```

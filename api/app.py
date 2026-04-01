@@ -6,6 +6,7 @@ from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from routes.auth import auth_bp
+from routes.measurement_types import measurement_types_bp
 from extensions.db import db
 from extensions.limiter import limiter
 import models
@@ -28,8 +29,18 @@ app.config['JWT_SECRET_KEY'] = os.getenv(
 )
 
 access_token_minutes = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES_MINUTES", "30"))
+refresh_token_days = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES_DAYS", "7"))
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=access_token_minutes)
+app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=refresh_token_days)
 app.config["RATELIMIT_STORAGE_URI"] = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
+app.config["JWT_TOKEN_LOCATION"] = ["cookies", "headers"]
+app.config["JWT_COOKIE_CSRF_PROTECT"] = True
+app.config["JWT_COOKIE_SECURE"] = env_mode == "production"
+app.config["JWT_COOKIE_SAMESITE"] = os.getenv("JWT_COOKIE_SAMESITE", "Lax")
+app.config["JWT_ACCESS_COOKIE_NAME"] = "access_token_cookie"
+app.config["JWT_REFRESH_COOKIE_NAME"] = "refresh_token_cookie"
+app.config["JWT_ACCESS_CSRF_COOKIE_NAME"] = "csrf_access_token"
+app.config["JWT_REFRESH_CSRF_COOKIE_NAME"] = "csrf_refresh_token"
 
 db.init_app(app)
 jwt = JWTManager(app)
@@ -39,9 +50,10 @@ frontend_origins = os.getenv(
     "FRONTEND_ORIGINS",
     "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174",
 )
-CORS(app, origins=[origin.strip() for origin in frontend_origins.split(",") if origin.strip()])
+CORS(app, origins=[origin.strip() for origin in frontend_origins.split(",") if origin.strip()], supports_credentials=True)
 
 app.register_blueprint(auth_bp, url_prefix="/auth")
+app.register_blueprint(measurement_types_bp, url_prefix="/measurement-types")
 
 @app.route("/")
 def home():

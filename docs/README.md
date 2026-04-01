@@ -1,15 +1,26 @@
-# Documentacao OrtoMetric
+# Documentacao do OrtoMetric
 
-Este diretorio concentra a documentacao tecnica e operacional do projeto.
+Este diretorio centraliza a documentacao tecnica do aplicativo.
 
 ## Indice
 
-- [SETUP.md](SETUP.md): como instalar e rodar localmente
-- [BACKEND.md](BACKEND.md): estrutura e regras da API Flask
-- [FRONTEND.md](FRONTEND.md): estrutura e fluxo do app React
-- [API.md](API.md): referencia de endpoints
-- [BANCO-DE-DADOS.md](BANCO-DE-DADOS.md): modelo de dados, tabelas e relacionamentos
-- [SECURITY.md](SECURITY.md): postura de seguranca atual e melhorias
-- [TROUBLESHOOTING.md](TROUBLESHOOTING.md): problemas comuns e solucoes
-- [ARQUITETURA-E-FLUXO.md](ARQUITETURA-E-FLUXO.md): visao de fluxo entre camadas
-- [user.md](user.md): jornada de uso da aplicacao
+- [Setup](SETUP.md)
+- [Backend](BACKEND.md)
+- [Frontend](FRONTEND.md)
+- [API](API.md)
+- [Seguranca](SECURITY.md)
+- [Troubleshooting](TROUBLESHOOTING.md)
+- [Arquitetura e fluxo](ARQUITETURA-E-FLUXO.md)
+- [Arquitetura, seguranca e deploy](ARQUITETURA-SEGURANCA-DEPLOY.md)
+
+## Leitura sugerida
+
+Se voce estiver entrando no projeto agora, siga esta ordem:
+
+1. [Setup](SETUP.md)
+2. [Arquitetura e fluxo](ARQUITETURA-E-FLUXO.md)
+3. [Backend](BACKEND.md)
+4. [Frontend](FRONTEND.md)
+5. [API](API.md)
+6. [Seguranca](SECURITY.md)
+7. [Arquitetura, seguranca e deploy](ARQUITETURA-SEGURANCA-DEPLOY.md)

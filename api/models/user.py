@@ -14,9 +14,3 @@ class User(db.Model):
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
     
-    # Relationships
-    
-    # - Annotations created by the user    
-    measurements = db.relationship('Measurement', back_populates='measured_by')    
-    audit_logs = db.relationship('AuditLog', back_populates='user')
-    

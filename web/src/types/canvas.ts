@@ -1,16 +1,17 @@
 import type { Transform } from "../types/transform"
-import type { Point, CobbMeasurement } from "../types/measurement"
+import type { Point, Measurement, DistanceCalibration } from "../types/measurement"
 
 export type CanvasBoardProps = {
   image: string | null
   transform: Transform
 
-  activeTool: "none" | "cobb" | "pan"
+  activeTool: "none" | "angle" | "distance" | "pan"
   isPanning: boolean
   isDragging: boolean
   isDraggingAngleLabel: boolean
   points: Point[]
-  measurements: CobbMeasurement[]
+  measurements: Measurement[]
+  distanceCalibration: DistanceCalibration | null
 
   onAddPoint: (x: number, y: number) => void
   onMovePoint: (pointId: string, x: number, y: number) => void
@@ -19,6 +20,8 @@ export type CanvasBoardProps = {
   onMoveAngleLabel: (measurementId: string, x: number, y: number) => void
   onStartAngleLabelDrag: (measurementId: string) => void
   onEndAngleLabelDrag: () => void
+  onUpdateMeasurementStyle: (measurementId: string, lineColor: string, lineWidth: number) => void
+  onUpdateMeasurementLabelFontSize: (measurementId: string, fontSize: number) => void
 
   onLoadImage: (file: File) => void
 

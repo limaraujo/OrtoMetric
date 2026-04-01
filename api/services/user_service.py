@@ -1,5 +1,5 @@
 from models.user import User
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, create_refresh_token
 from schemas.user_schema import UserCreate, UserResponse, UserLogin
 from extensions.db import db
 from services.exceptions import UserAlreadyExistsError, InvalidCredentialsError
@@ -19,13 +19,14 @@ def create_user(user_create: UserCreate) -> UserResponse:
     return UserResponse(id=user.id, username=user.username, email=user.email)
 
 
-def login_user(data: UserLogin) -> tuple[User, str]:
+def login_user(data: UserLogin) -> tuple[User, str, str]:
     user = User.query.filter(User.email == data.email).first()
     
     if not user or not user.check_password(data.password):
         raise InvalidCredentialsError("Invalid email or password")
 
     # Flask-JWT-Extended expects the subject claim to be JSON-string-compatible.
-    token = create_access_token(identity=str(user.id))
+    access_token = create_access_token(identity=str(user.id))
+    refresh_token = create_refresh_token(identity=str(user.id))
     
-    return user, token
+    return user, access_token, refresh_token

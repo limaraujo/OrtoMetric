@@ -1,8 +1,17 @@
 import logging
+import os
 
 from flask import Blueprint, request, jsonify
 from flask_limiter.errors import RateLimitExceeded
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_limiter.util import get_remote_address
+from flask_jwt_extended import (
+    create_access_token,
+    get_jwt_identity,
+    jwt_required,
+    set_access_cookies,
+    set_refresh_cookies,
+    unset_jwt_cookies,
+)
 from pydantic import ValidationError
 from extensions.limiter import limiter
 from schemas.user_schema import UserCreate, UserResponse, UserLogin, UserUpdate
@@ -14,6 +23,14 @@ from services.exceptions import UserAlreadyExistsError, InvalidCredentialsError
 
 auth_bp = Blueprint("auth", __name__)
 logger = logging.getLogger(__name__)
+LOGIN_RATE_LIMIT = os.getenv("AUTH_LOGIN_RATE_LIMIT", "10 per minute")
+
+
+def _login_rate_limit_key() -> str:
+    payload = request.get_json(silent=True) or {}
+    email = str(payload.get("email", "")).strip().lower()
+    ip = get_remote_address()
+    return f"{ip}:{email}"
 
 
 def _validation_error_response(err: ValidationError):
@@ -52,7 +69,7 @@ def register():
     ).model_dump(), 201
     
 @auth_bp.route("/login", methods=["POST"])
-@limiter.limit("5 per minute")
+@limiter.limit(LOGIN_RATE_LIMIT, key_func=_login_rate_limit_key)
 def login():
     payload = request.get_json(silent=True) or {}
     try: 
@@ -61,7 +78,7 @@ def login():
         return _validation_error_response(e)
 
     try:
-        user, token = login_user(data)
+        user, access_token, refresh_token = login_user(data)
     except InvalidCredentialsError as e:
         logger.info("login_failed email=%s reason=%s", data.email, str(e))
         return jsonify({"error": str(e)}), 401
@@ -71,14 +88,35 @@ def login():
 
     logger.info("login_success email=%s user_id=%s", data.email, user.id)
 
-    return {
+    response = jsonify({
         "user": UserResponse(
             id=user.id,
             username=user.username,
             email=user.email
         ).model_dump(),
-        "access_token": token
-    }, 200
+    })
+    set_access_cookies(response, access_token)
+    set_refresh_cookies(response, refresh_token)
+    return response, 200
+
+
+@auth_bp.route("/refresh", methods=["POST"])
+@jwt_required(refresh=True)
+def refresh():
+    user_id = str(get_jwt_identity())
+    access_token = create_access_token(identity=user_id)
+    response = jsonify({"ok": True})
+    set_access_cookies(response, access_token)
+    logger.info("refresh_success user_id=%s", user_id)
+    return response, 200
+
+
+@auth_bp.route("/logout", methods=["POST"])
+def logout():
+    response = jsonify({"ok": True})
+    unset_jwt_cookies(response)
+    logger.info("logout_success")
+    return response, 200
 
 @auth_bp.route("/me", methods=["GET"])
 @jwt_required()

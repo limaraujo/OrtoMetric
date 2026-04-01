@@ -1,10 +1,12 @@
 import { useState, useCallback, useRef } from 'react';
-import type { Point, CobbMeasurement, MeasurementState, HistoryAction } from '../types/measurement';
+import type { Point, CobbMeasurement, DistanceMeasurement, Measurement, MeasurementState, HistoryAction } from '../types/measurement';
+import { isCobb, isDistance } from '../types/measurement';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
 const calculateAngle = (line1Start: Point, line1End: Point, line2Start: Point, line2End: Point): number => {
   // Calculate direction vectors
+
   const v1x = line1End.x - line1Start.x;
   const v1y = line1End.y - line1Start.y;
   const v2x = line2End.x - line2Start.x;
@@ -29,13 +31,20 @@ const calculateAngle = (line1Start: Point, line1End: Point, line2Start: Point, l
   return Math.abs(angle * (180 / Math.PI));
 };
 
+const calculateDistance = (p1: Point, p2: Point): number => {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  return Math.sqrt(dx * dx + dy * dy);
+};
+
 const INITIAL_STATE: MeasurementState = {
   points: [],
   measurements: [],
+  draftMeasurementTypeId: null,
   activeTool: 'none',
   isDragging: false,
   draggedPointId: null,
-  draggedAngleLabelId: null,
+  draggedLabelId: null,
 };
 
 export function useMeasurement() {
@@ -50,17 +59,22 @@ export function useMeasurement() {
     historyIndexRef.current = historyRef.current.length - 1;
   }, []);
 
-  const addPoint = useCallback((x: number, y: number) => {
-    if (state.activeTool !== 'cobb') return null;
-    if (state.points.length >= 4) return null;
+  const addPoint = useCallback((x: number, y: number, measurementTypeId?: string) => {
+    if (state.activeTool === 'none' || state.activeTool === 'pan') return null;
+
+    // For angle: max 4 points, for distance: max 2 points
+    const maxPoints = state.activeTool === 'angle' ? 4 : 2;
+    if (state.points.length >= maxPoints) return null;
 
     const newPoint: Point = { x, y, id: generateId() };
-    
+
     setState(prev => {
       const newPoints = [...prev.points, newPoint];
-      
-      // If we have 4 points, create a measurement
-      if (newPoints.length === 4) {
+      const nextDraftTypeId = prev.draftMeasurementTypeId ?? measurementTypeId ?? '';
+
+      // Check if we need to create a measurement
+      if (prev.activeTool === 'angle' && newPoints.length === 4) {
+        // Angle measurement with 4 points
         if (newPoints[0].x > newPoints[1].x) {
           // Ensure upper line is always from left to right
           [newPoints[0], newPoints[1]] = [newPoints[1], newPoints[0]];
@@ -70,8 +84,7 @@ export function useMeasurement() {
           [newPoints[2], newPoints[3]] = [newPoints[3], newPoints[2]];
         }
 
-
-        const measurement: CobbMeasurement = {
+        const cobbMeasurement: CobbMeasurement = {
           id: generateId(),
           upperLine: {
             id: generateId(),
@@ -83,31 +96,67 @@ export function useMeasurement() {
             start: newPoints[2],
             end: newPoints[3],
           },
+          measurementTypeId: nextDraftTypeId,
           angle: calculateAngle(newPoints[0], newPoints[1], newPoints[2], newPoints[3]),
           timestamp: new Date(),
         };
 
         saveHistory({
           type: 'add_measurement',
-          payload: measurement,
+          payload: cobbMeasurement,
           previousState: prev,
         });
 
         return {
           ...prev,
           points: [],
-          measurements: [...prev.measurements, measurement],
+          draftMeasurementTypeId: null,
+          measurements: [...prev.measurements, cobbMeasurement],
+          activeTool: 'none',
+        };
+      } else if (prev.activeTool === 'distance' && newPoints.length === 2) {
+        // Distance measurement with 2 points
+        const distance = calculateDistance(newPoints[0], newPoints[1]);
+
+        const distanceMeasurement: DistanceMeasurement = {
+          id: generateId(),
+          line: {
+            id: generateId(),
+            start: newPoints[0],
+            end: newPoints[1],
+          },
+          measurementTypeId: nextDraftTypeId,
+          distance,
+          timestamp: new Date(),
+        };
+
+        saveHistory({
+          type: 'add_measurement',
+          payload: distanceMeasurement,
+          previousState: prev,
+        });
+
+        return {
+          ...prev,
+          points: [],
+          draftMeasurementTypeId: null,
+          measurements: [...prev.measurements, distanceMeasurement],
           activeTool: 'none',
         };
       }
 
+      // Still collecting points
       saveHistory({
         type: 'add_point',
         payload: newPoint,
         previousState: prev,
       });
 
-      return { ...prev, points: newPoints };
+      return {
+        ...prev,
+        points: newPoints,
+        draftMeasurementTypeId: nextDraftTypeId,
+      };
     });
 
     return newPoint;
@@ -125,28 +174,56 @@ export function useMeasurement() {
 
       // Check if point is in measurements
       const newMeasurements = prev.measurements.map(m => {
-        let updated = { ...m };
-        if (m.upperLine.start.id === pointId) {
-          updated.upperLine = { ...m.upperLine, start: { ...m.upperLine.start, x, y } };
-        } else if (m.upperLine.end.id === pointId) {
-          updated.upperLine = { ...m.upperLine, end: { ...m.upperLine.end, x, y } };
-        } else if (m.lowerLine.start.id === pointId) {
-          updated.lowerLine = { ...m.lowerLine, start: { ...m.lowerLine.start, x, y } };
-        } else if (m.lowerLine.end.id === pointId) {
-          updated.lowerLine = { ...m.lowerLine, end: { ...m.lowerLine.end, x, y } };
+        if (isCobb(m)) {
+          let updated: CobbMeasurement = m;
+
+          // Handle Cobb/angle measurement
+          if (m.upperLine.start.id === pointId) {
+            updated = { ...m, upperLine: { ...m.upperLine, start: { ...m.upperLine.start, x, y } } };
+          } else if (m.upperLine.end.id === pointId) {
+            updated = { ...m, upperLine: { ...m.upperLine, end: { ...m.upperLine.end, x, y } } };
+          } else if (m.lowerLine.start.id === pointId) {
+            updated = { ...m, lowerLine: { ...m.lowerLine, start: { ...m.lowerLine.start, x, y } } };
+          } else if (m.lowerLine.end.id === pointId) {
+            updated = { ...m, lowerLine: { ...m.lowerLine, end: { ...m.lowerLine.end, x, y } } };
+          }
+
+          if (updated !== m) {
+            return {
+              ...updated,
+              angle: calculateAngle(
+                updated.upperLine.start,
+                updated.upperLine.end,
+                updated.lowerLine.start,
+                updated.lowerLine.end
+              ),
+            };
+          }
+
+          return m;
         }
-        
-        // Recalculate angle if any point was moved
-        if (updated !== m) {
-          updated.angle = calculateAngle(
-            updated.upperLine.start,
-            updated.upperLine.end,
-            updated.lowerLine.start,
-            updated.lowerLine.end
-          );
+
+        if (isDistance(m)) {
+          let updated: DistanceMeasurement = m;
+
+          // Handle distance measurement
+          if (m.line.start.id === pointId) {
+            updated = { ...m, line: { ...m.line, start: { ...m.line.start, x, y } } };
+          } else if (m.line.end.id === pointId) {
+            updated = { ...m, line: { ...m.line, end: { ...m.line.end, x, y } } };
+          }
+
+          if (updated !== m) {
+            return {
+              ...updated,
+              distance: calculateDistance(updated.line.start, updated.line.end),
+            };
+          }
+
+          return m;
         }
-        
-        return updated;
+
+        return m;
       });
 
       return { ...prev, measurements: newMeasurements };
@@ -170,16 +247,16 @@ export function useMeasurement() {
     });
   }, [saveHistory]);
 
-  const setActiveTool = useCallback((tool: 'none' | 'cobb' | 'pan') => {
-    setState(prev => ({ ...prev, activeTool: tool, points: [] }));
+  const setActiveTool = useCallback((tool: 'none' | 'angle' | 'distance' | 'pan') => {
+    setState(prev => ({ ...prev, activeTool: tool, points: [], draftMeasurementTypeId: null }));
   }, []);
 
   const startAngleLabelDrag = useCallback((measurementId: string) => {
-    setState(prev => ({ ...prev, draggedAngleLabelId: measurementId }));
+    setState(prev => ({ ...prev, draggedLabelId: measurementId }));
   }, []);
 
   const endAngleLabelDrag = useCallback(() => {
-    setState(prev => ({ ...prev, draggedAngleLabelId: null }));
+    setState(prev => ({ ...prev, draggedLabelId: null }));
   }, []);
 
   const moveAngleLabel = useCallback((measurementId: string, x: number, y: number) => {
@@ -190,6 +267,70 @@ export function useMeasurement() {
       ),
     }));
   }, []);
+
+  const updateMeasurementStyle = useCallback((measurementId: string, lineColor: string, lineWidth: number) => {
+    setState(prev => {
+      const nextLineWidth = Math.max(1, Math.min(12, lineWidth));
+      const updatedMeasurements = prev.measurements.map(m =>
+        m.id === measurementId ? { ...m, lineColor, lineWidth: nextLineWidth } : m
+      );
+      const updatedMeasurement = updatedMeasurements.find(m => m.id === measurementId);
+
+      if (!updatedMeasurement) return prev;
+
+      saveHistory({
+        type: 'update_measurement_style',
+        payload: updatedMeasurement,
+        previousState: prev,
+      });
+
+      return {
+        ...prev,
+        measurements: updatedMeasurements,
+      };
+    });
+  }, [saveHistory]);
+
+  const updateMeasurementLabelFontSize = useCallback((measurementId: string, fontSize: number) => {
+    setState(prev => {
+      const nextFontSize = Math.max(10, Math.min(64, fontSize));
+      const updatedMeasurements = prev.measurements.map(m =>
+        m.id === measurementId ? { ...m, labelFontSize: nextFontSize } : m
+      );
+      const updatedMeasurement = updatedMeasurements.find(m => m.id === measurementId);
+
+      if (!updatedMeasurement) return prev;
+
+      saveHistory({
+        type: 'update_measurement_style',
+        payload: updatedMeasurement,
+        previousState: prev,
+      });
+
+      return {
+        ...prev,
+        measurements: updatedMeasurements,
+      };
+    });
+  }, [saveHistory]);
+
+  const removeMeasurement = useCallback((measurementId: string) => {
+    setState(prev => {
+      const target = prev.measurements.find(m => m.id === measurementId);
+      if (!target) return prev;
+
+      saveHistory({
+        type: 'remove_measurement',
+        payload: target,
+        previousState: prev,
+      });
+
+      return {
+        ...prev,
+        measurements: prev.measurements.filter(m => m.id !== measurementId),
+      };
+    });
+  }, [saveHistory]);
 
   const clearAll = useCallback(() => {
     saveHistory({
@@ -211,7 +352,7 @@ export function useMeasurement() {
     if (historyIndexRef.current >= historyRef.current.length - 1) return;
     historyIndexRef.current++;
     const action = historyRef.current[historyIndexRef.current];
-    
+
     // Re-apply the action
     switch (action.type) {
       case 'add_point':
@@ -224,12 +365,27 @@ export function useMeasurement() {
         setState(prev => ({
           ...prev,
           points: [],
-          measurements: [...prev.measurements, action.payload as CobbMeasurement],
+          draftMeasurementTypeId: null,
+          measurements: [...prev.measurements, action.payload as Measurement],
           activeTool: 'none',
         }));
         break;
       case 'clear_all':
         setState(INITIAL_STATE);
+        break;
+      case 'remove_measurement':
+        setState(prev => ({
+          ...prev,
+          measurements: prev.measurements.filter(m => m.id !== (action.payload as Measurement).id),
+        }));
+        break;
+      case 'update_measurement_style':
+        setState(prev => ({
+          ...prev,
+          measurements: prev.measurements.map(m =>
+            m.id === (action.payload as Measurement).id ? (action.payload as Measurement) : m
+          ),
+        }));
         break;
     }
   }, []);
@@ -247,6 +403,9 @@ export function useMeasurement() {
     startAngleLabelDrag,
     endAngleLabelDrag,
     moveAngleLabel,
+    updateMeasurementStyle,
+    updateMeasurementLabelFontSize,
+    removeMeasurement,
     clearAll,
     undo,
     redo,

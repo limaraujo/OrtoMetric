@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Header } from '../components/Header'
 import { Toolbar } from '../components/Toolbar'
@@ -7,23 +7,42 @@ import { useImageCanvas } from '../hooks/useImageCanvas'
 import { CanvasBoard } from '../components/CanvasBoard'
 import { ResultsSidebar } from '../components/ResultsSidebar'
 import api from '../lib/api'
+import {
+  loadAllMeasurementTypes,
+  loadActiveMeasurementTypeId,
+  saveActiveMeasurementTypeId,
+  type MeasurementTypeItem,
+} from '../lib/measurementTypes'
 
 export default function App() {
   const navigate = useNavigate()
+  const [allTypes, setAllTypes] = useState<MeasurementTypeItem[]>([])
+  const [selectedTypeId, setSelectedTypeId] = useState<string>('')
+  const previousImageRef = useRef<string | null>(null)
 
   useEffect(() => {
-    const token = sessionStorage.getItem("access_token")
-    if (!token) {
-      navigate("/login")
-      return
+    const loadTypes = async () => {
+      const loaded = await loadAllMeasurementTypes()
+      setAllTypes(loaded)
+      const activeTypeId = await loadActiveMeasurementTypeId()
+      const fallback = loaded[0]?.id ?? ''
+      const resolved = loaded.some((t) => t.id === activeTypeId) ? (activeTypeId ?? fallback) : fallback
+      setSelectedTypeId(resolved)
     }
 
+    void loadTypes()
+  }, [])
+
+  useEffect(() => {
+    if (!selectedTypeId) return
+    void saveActiveMeasurementTypeId(selectedTypeId)
+  }, [selectedTypeId])
+
+  useEffect(() => {
     const verifySession = async () => {
       try {
         await api.get('/auth/me')
       } catch {
-        sessionStorage.removeItem('access_token')
-        sessionStorage.removeItem('user')
         navigate('/login')
       }
     }
@@ -41,12 +60,23 @@ export default function App() {
     startAngleLabelDrag,
     endAngleLabelDrag,
     moveAngleLabel,
+    updateMeasurementStyle,
+    updateMeasurementLabelFontSize,
+    removeMeasurement,
     clearAll,
     undo,
     redo,
     canUndo,
     canRedo,
   } = useMeasurement()
+
+  const selectedType: MeasurementTypeItem | null =
+    allTypes.find((t) => t.id === selectedTypeId) ?? allTypes[0] ?? null
+
+  const handleSelectType = (typeId: string) => {
+    setSelectedTypeId(typeId)
+    setActiveTool('none')
+  }
 
   const {
     image,
@@ -66,7 +96,15 @@ export default function App() {
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
-  } = useImageCanvas(state.isDragging || !!state.draggedAngleLabelId)
+  } = useImageCanvas(state.isDragging || !!state.draggedLabelId)
+
+  // Clear canvas when image changes
+  useEffect(() => {
+    if (image && previousImageRef.current && previousImageRef.current !== image) {
+      clearAll()
+    }
+    previousImageRef.current = image
+  }, [image, clearAll])
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -91,8 +129,12 @@ export default function App() {
             onUndo={undo}
             onRedo={redo}
             onClear={clearAll}
+            onOpenCalibrationPanel={() => { }}
             canUndo={canUndo}
             canRedo={canRedo}
+            types={allTypes}
+            selectedTypeId={selectedType?.id ?? ''}
+            onSelectType={handleSelectType}
           />
 
           <CanvasBoard
@@ -101,16 +143,19 @@ export default function App() {
             activeTool={state.activeTool}
             isPanning={isPanning}
             isDragging={state.isDragging}
-            isDraggingAngleLabel={!!state.draggedAngleLabelId}
+            isDraggingAngleLabel={!!state.draggedLabelId}
             points={state.points}
             measurements={state.measurements}
-            onAddPoint={addPoint}
+            distanceCalibration={null}
+            onAddPoint={(x, y) => addPoint(x, y, selectedType?.id)}
             onMovePoint={movePoint}
             onStartDrag={startDrag}
             onEndDrag={endDrag}
             onMoveAngleLabel={moveAngleLabel}
             onStartAngleLabelDrag={startAngleLabelDrag}
             onEndAngleLabelDrag={endAngleLabelDrag}
+            onUpdateMeasurementStyle={updateMeasurementStyle}
+            onUpdateMeasurementLabelFontSize={updateMeasurementLabelFontSize}
             onLoadImage={loadImage}
             onStartPan={startPan}
             onUpdatePan={updatePan}
@@ -125,6 +170,9 @@ export default function App() {
 
         <ResultsSidebar
           measurements={state.measurements}
+          types={allTypes}
+          distanceCalibration={null}
+          onDeleteMeasurement={removeMeasurement}
         />
 
       </main>

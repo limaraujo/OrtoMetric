@@ -6,9 +6,15 @@
 - npm 9+
 - Python 3.11+
 
+## Estrutura
+
+- Backend em `api/`
+- Frontend em `web/`
+- Documentacao em `docs/`
+
 ## 1. Instalar dependencias
 
-Na raiz do repositorio:
+Na raiz do projeto:
 
 ```bash
 npm install
@@ -21,7 +27,14 @@ cd api
 python -m pip install -r requirements.txt
 ```
 
-## 2. Variaveis de ambiente
+No frontend:
+
+```bash
+cd web
+npm install
+```
+
+## 2. Configurar variaveis de ambiente
 
 Backend:
 
@@ -37,32 +50,33 @@ cd web
 cp .env.example .env
 ```
 
-## 3. Subir backend
+## 3. Rodar o backend
 
 ```bash
 cd api
 python app.py
 ```
 
-URL esperada: `http://localhost:5000`
+API disponivel em `http://localhost:5000`.
 
-## 4. Subir frontend
+## 4. Rodar o frontend
 
 ```bash
 cd web
 npm run dev
 ```
 
-URL esperada: `http://localhost:5173`
+App disponivel em `http://localhost:5173`.
 
-## 5. Validar funcionamento rapido
+## 5. Validar rapidamente
 
-1. Acesse `http://localhost:5173/login`
-2. Cadastre um usuario com senha forte (8+, maiuscula, minuscula, numero e simbolo)
-3. Faca login
-4. Verifique se o redirecionamento para `/` funciona
+1. Acesse a tela de autenticacao.
+2. Cadastre um usuario com senha forte.
+3. Faca login.
+4. Verifique se o dashboard abre.
+5. Tente abrir a area de medicao.
 
-## Testes e build
+## 6. Testes e build
 
 Backend:
 
@@ -74,5 +88,6 @@ pytest -q
 Frontend:
 
 ```bash
-npm run build -w web
+cd web
+npm run build
 ```

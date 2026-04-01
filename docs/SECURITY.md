@@ -1,37 +1,37 @@
-# Security
+# Seguranca
 
 ## Implementado hoje
 
-- senha com hash (`generate_password_hash`)
-- validacao de senha forte no cadastro
-- JWT para rotas protegidas
-- checagem de `JWT_SECRET_KEY` em producao
-- CORS com lista de origens configuravel
-- logging de sucesso/falha em auth
+- Senhas com hash.
+- Validacao forte de senha no cadastro.
+- JWT com access token e refresh token.
+- Cookies com CSRF habilitado.
+- Rate limit no login.
+- Headers basicos de seguranca na API.
+- CORS configuravel por ambiente.
 
 ## Riscos atuais
 
-1. token em `sessionStorage` (risco em caso de XSS)
-2. sem refresh token
-3. sem rate limit no login
-4. banco SQLite para ambiente local (nao recomendado em producao)
-5. sem CSRF (relevante se migrar para cookie auth)
+- SQLite continua sendo um ponto fraco para producao.
+- O limiter usa memoria local.
+- O servidor de desenvolvimento nao deve ser usado no deploy.
+- O CORS precisa ser fechado para dominios reais.
 
-## Boas praticas para producao
+## Boas praticas recomendadas
 
-1. usar HTTPS obrigatorio
-2. usar `JWT_SECRET_KEY` forte e secreta
-3. restringir `FRONTEND_ORIGINS` para dominios oficiais
-4. usar PostgreSQL
-5. ativar monitoramento e alertas
-6. adicionar rate limiting no endpoint de login
+1. Usar HTTPS obrigatorio.
+2. Definir `JWT_SECRET_KEY` forte.
+3. Limitar `FRONTEND_ORIGINS` aos dominios oficiais.
+4. Trocar SQLite por PostgreSQL.
+5. Usar Redis para rate limit.
+6. Fazer logs estruturados e monitoramento.
 
 ## Checklist de release
 
-- [ ] FLASK_ENV=production
-- [ ] FLASK_DEBUG=False
-- [ ] JWT_SECRET_KEY segura
-- [ ] FRONTEND_ORIGINS restrito
-- [ ] DATABASE_URL configurada
-- [ ] backup de banco configurado
-- [ ] logs centralizados
+- `FLASK_ENV=production`
+- `FLASK_DEBUG=False`
+- `JWT_SECRET_KEY` segura
+- `FRONTEND_ORIGINS` restrito
+- `DATABASE_URL` configurada
+- backup de banco configurado
+- logs centralizados

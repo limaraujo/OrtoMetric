@@ -1,4 +1,4 @@
-# Backend (Flask)
+# Backend
 
 ## Stack
 
@@ -6,76 +6,55 @@
 - Flask-SQLAlchemy
 - Flask-JWT-Extended
 - Flask-CORS
+- Flask-Limiter
 - Pydantic
 
-## Estrutura
+## Camadas
 
-```text
-+api/
-+  app.py
-+  extensions/
-+    db.py
-+  models/
-+    user.py
-+  schemas/
-+    user_schema.py
-+  services/
-+    exceptions.py
-+    user_service.py
-+  routes/
-+    auth.py
-+  tests/
-+    test_auth.py
-+```
-
-## Responsabilidades por camada
-
-- `routes/`: entrada HTTP e resposta
-- `schemas/`: validacao de payload
-- `services/`: regra de negocio
-- `models/`: entidades persistidas
-- `extensions/`: objetos compartilhados (db)
+- `api/app.py`: configuracao geral da aplicacao
+- `api/routes/`: endpoints HTTP
+- `api/services/`: regras de negocio
+- `api/models/`: persistencia
+- `api/schemas/`: validacao de dados
+- `api/extensions/`: objetos compartilhados, como banco e limiter
 
 ## Fluxo de autenticacao
 
 1. `POST /auth/register`
-2. `UserCreate` valida payload
-3. `create_user` verifica email e cria usuario
-4. Senha e hash com `generate_password_hash`
-5. `POST /auth/login` valida credenciais
-6. `login_user` gera JWT
-7. `GET /auth/me` exige token (`@jwt_required`)
+2. `UserCreate` valida o payload
+3. `create_user` cria o usuario com senha hash
+4. `POST /auth/login`
+5. `login_user` gera access token e refresh token
+6. O frontend envia cookies com `withCredentials`
+7. Rotas protegidas usam `@jwt_required()`
 
-## Configuracao (app.py)
+## Modelos principais
 
-- CORS por `FRONTEND_ORIGINS`
-- JWT secret exigido em producao
-- Logging configurado por `LOG_LEVEL`
-- Banco padrao: SQLite (`sqlite:///app.db`)
+- `User`: usuario autenticado
+- `MeasurementTypeOverride`: sobrescrita de tipo padrao por usuario
+- `MeasurementTypeCustom`: tipo customizado por usuario
+- `MeasurementTypePreference`: tipo ativo do usuario
 
-## Excecoes de dominio
+## Configuracao importante
 
-Arquivo: `services/exceptions.py`
-
-- `UserAlreadyExistsError`
-- `InvalidCredentialsError`
-
-Uso: evitar `ValueError` generico para regras de auth.
+- JWT em cookie com CSRF
+- CORS configuravel por `FRONTEND_ORIGINS`
+- Secret obrigatoria em producao
+- Rate limit no login
 
 ## Testes
 
-Arquivo: `tests/test_auth.py`
+Os testes cobrem:
 
-Cobertura atual principal:
 - cadastro
 - login
+- logout
+- refresh
 - rota protegida
-- login invalido
+- listagem e sincronizacao de tipos de medicao
 
-## Melhorias recomendadas
+## Pontos de atencao
 
-1. adicionar migrations (Alembic)
-2. adicionar rate limit no login
-3. adicionar refresh token
-4. mover config para modulo dedicado
-5. usar PostgreSQL em producao
+- SQLite e valido para desenvolvimento, mas nao e ideal para producao.
+- O limiter em memoria precisa ser trocado por Redis para escala real.
+- Em producao, use um servidor WSGI como Gunicorn.

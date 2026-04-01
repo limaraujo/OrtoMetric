@@ -14,10 +14,42 @@ export interface CobbMeasurement {
   id: string;
   upperLine: Line;
   lowerLine: Line;
+  measurementTypeId: string;
   angle: number;
   timestamp: Date;
   labelX?: number;
   labelY?: number;
+  lineColor?: string;
+  lineWidth?: number;
+  labelFontSize?: number;
+}
+
+export interface DistanceMeasurement {
+  id: string;
+  line: Line;
+  measurementTypeId: string;
+  distance: number;
+  timestamp: Date;
+  labelX?: number;
+  labelY?: number;
+  lineColor?: string;
+  lineWidth?: number;
+  labelFontSize?: number;
+}
+
+export interface DistanceCalibration {
+  pixelsPerUnit: number;
+  unit: string;
+}
+
+export type Measurement = CobbMeasurement | DistanceMeasurement;
+
+export function isCobb(m: Measurement): m is CobbMeasurement {
+  return 'upperLine' in m && 'lowerLine' in m && 'angle' in m;
+}
+
+export function isDistance(m: Measurement): m is DistanceMeasurement {
+  return 'line' in m && 'distance' in m;
 }
 
 export interface ImageTransform {
@@ -31,15 +63,16 @@ export interface ImageTransform {
 
 export interface MeasurementState {
   points: Point[];
-  measurements: CobbMeasurement[];
-  activeTool: 'none' | 'cobb' | 'pan';
+  measurements: Measurement[];
+  draftMeasurementTypeId: string | null;
+  activeTool: 'none' | 'angle' | 'distance' | 'pan';
   isDragging: boolean;
   draggedPointId: string | null;
-  draggedAngleLabelId: string | null;
+  draggedLabelId: string | null;
 }
 
 export type HistoryAction = {
-  type: 'add_point' | 'move_point' | 'remove_point' | 'clear_all' | 'add_measurement';
+  type: 'add_point' | 'move_point' | 'remove_point' | 'clear_all' | 'add_measurement' | 'remove_measurement' | 'update_measurement_style';
   payload: any;
   previousState: MeasurementState;
 };

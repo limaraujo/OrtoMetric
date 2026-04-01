@@ -93,13 +93,10 @@ export default function AuthContainer() {
         await api.post("/auth/register", form);
       }
 
-      const { data } = await api.post<LoginResponse>("/auth/login", {
+      await api.post<LoginResponse>("/auth/login", {
         email: form.email,
         password: form.password,
       });
-
-      sessionStorage.setItem("access_token", data.access_token);
-      sessionStorage.setItem("user", JSON.stringify(data.user));
 
       navigate("/dashboard");
     } catch (err) {
