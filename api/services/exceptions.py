@@ -8,3 +8,11 @@ class UserAlreadyExistsError(AuthError):
 
 class InvalidCredentialsError(AuthError):
     """Email ou senha invalidos."""
+
+
+class UserNotFoundError(AuthError):
+    """Usuario nao encontrado."""
+
+
+class ProfileConflictError(AuthError):
+    """Conflito ao atualizar perfil (username ou email em uso)."""

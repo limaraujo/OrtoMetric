@@ -1,7 +1,7 @@
 import logging
 import os
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 from flask_limiter.errors import RateLimitExceeded
 from flask_limiter.util import get_remote_address
 from flask_jwt_extended import (
@@ -14,11 +14,14 @@ from flask_jwt_extended import (
 )
 from pydantic import ValidationError
 from extensions.limiter import limiter
+from routes.deps import get_user_service
 from schemas.user_schema import UserCreate, UserResponse, UserLogin, UserUpdate
-from models.user import User
-from extensions.db import db
-from services.user_service import create_user, login_user
-from services.exceptions import UserAlreadyExistsError, InvalidCredentialsError
+from services.exceptions import (
+    InvalidCredentialsError,
+    ProfileConflictError,
+    UserAlreadyExistsError,
+    UserNotFoundError,
+)
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -43,16 +46,17 @@ def handle_rate_limit_exceeded(_err: RateLimitExceeded):
     logger.warning("rate_limit_exceeded endpoint=auth")
     return jsonify({"error": "Too many login attempts. Try again later."}), 429
 
+
 @auth_bp.route("/register", methods=["POST"])
 def register():
     payload = request.get_json(silent=True) or {}
-    try: 
+    try:
         data = UserCreate(**payload)
     except ValidationError as e:
         return _validation_error_response(e)
 
     try:
-        user = create_user(data)
+        user = get_user_service().create_user(data)
     except UserAlreadyExistsError as e:
         logger.info("register_failed email=%s reason=%s", data.email, str(e))
         return jsonify({"error": str(e)}), 400
@@ -62,23 +66,20 @@ def register():
 
     logger.info("register_success email=%s user_id=%s", data.email, user.id)
 
-    return UserResponse(
-        id=user.id,
-        username=user.username,
-        email=user.email
-    ).model_dump(), 201
-    
+    return user.model_dump(), 201
+
+
 @auth_bp.route("/login", methods=["POST"])
 @limiter.limit(LOGIN_RATE_LIMIT, key_func=_login_rate_limit_key)
 def login():
     payload = request.get_json(silent=True) or {}
-    try: 
+    try:
         data = UserLogin(**payload)
     except ValidationError as e:
         return _validation_error_response(e)
 
     try:
-        user, access_token, refresh_token = login_user(data)
+        user, access_token, refresh_token = get_user_service().login_user(data)
     except InvalidCredentialsError as e:
         logger.info("login_failed email=%s reason=%s", data.email, str(e))
         return jsonify({"error": str(e)}), 401
@@ -88,13 +89,15 @@ def login():
 
     logger.info("login_success email=%s user_id=%s", data.email, user.id)
 
-    response = jsonify({
-        "user": UserResponse(
-            id=user.id,
-            username=user.username,
-            email=user.email
-        ).model_dump(),
-    })
+    response = jsonify(
+        {
+            "user": UserResponse(
+                id=user.id,
+                username=user.username,
+                email=user.email,
+            ).model_dump(),
+        }
+    )
     set_access_cookies(response, access_token)
     set_refresh_cookies(response, refresh_token)
     return response, 200
@@ -118,6 +121,7 @@ def logout():
     logger.info("logout_success")
     return response, 200
 
+
 @auth_bp.route("/me", methods=["GET"])
 @jwt_required()
 def me():
@@ -131,26 +135,20 @@ def me():
 @jwt_required()
 def get_profile():
     user_id = int(get_jwt_identity())
-    user = db.session.get(User, user_id)
-
-    if not user:
+    try:
+        profile = get_user_service().get_profile(user_id)
+    except UserNotFoundError:
         logger.info("profile_not_found user_id=%s", user_id)
         return jsonify({"error": "User not found"}), 404
 
     logger.info("profile_read_success user_id=%s", user_id)
-    return UserResponse(id=user.id, username=user.username, email=user.email).model_dump(), 200
+    return profile.model_dump(), 200
 
 
 @auth_bp.route("/profile", methods=["PUT"])
 @jwt_required()
 def update_profile():
     user_id = int(get_jwt_identity())
-    user = db.session.get(User, user_id)
-
-    if not user:
-        logger.info("profile_update_not_found user_id=%s", user_id)
-        return jsonify({"error": "User not found"}), 404
-
     payload = request.get_json(silent=True) or {}
 
     try:
@@ -158,29 +156,14 @@ def update_profile():
     except ValidationError as e:
         return _validation_error_response(e)
 
-    if data.username is not None and data.username != user.username:
-        username_in_use = User.query.filter(
-            User.username == data.username,
-            User.id != user.id,
-        ).first()
+    try:
+        profile = get_user_service().update_profile(user_id, data)
+    except UserNotFoundError:
+        logger.info("profile_update_not_found user_id=%s", user_id)
+        return jsonify({"error": "User not found"}), 404
+    except ProfileConflictError as e:
+        logger.info("profile_update_conflict user_id=%s reason=%s", user_id, str(e))
+        return jsonify({"error": str(e)}), 400
 
-        if username_in_use:
-            logger.info("profile_update_conflict user_id=%s field=username", user_id)
-            return jsonify({"error": "Username already exists"}), 400
-        user.username = data.username
-
-    if data.email is not None and data.email != user.email:
-        email_in_use = User.query.filter(
-            User.email == data.email,
-            User.id != user.id,
-        ).first()
-
-        if email_in_use:
-            logger.info("profile_update_conflict user_id=%s field=email", user_id)
-            return jsonify({"error": "Email already exists"}), 400
-        user.email = data.email
-
-    db.session.commit()
     logger.info("profile_update_success user_id=%s", user_id)
-
-    return UserResponse(id=user.id, username=user.username, email=user.email).model_dump(), 200
+    return profile.model_dump(), 200

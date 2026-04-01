@@ -1,22 +1,5 @@
 from uuid import uuid4
 
-import pytest
-
-from app import app
-from extensions.db import db
-
-
-@pytest.fixture
-def client():
-    app.config["TESTING"] = True
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-    app.config["RATELIMIT_ENABLED"] = False
-
-    with app.test_client() as client:
-        with app.app_context():
-            db.create_all()
-        yield client
-
 
 def create_user_and_login(client):
     suffix = uuid4().hex[:8]

@@ -11,9 +11,11 @@
 
 ## Estrutura
 
-- `web/src/pages/AuthContainer.tsx`: login e cadastro
-- `web/src/pages/DoctorWorkspace.tsx`: gestao de tipos de medicao
-- `web/src/pages/MeasurePage.tsx`: tela de medicao
+- `web/src/features/auth/`: login e cadastro (`AuthContainer`, `AuthForm`, `types.ts`)
+- `web/src/features/measurement/pages/DoctorWorkspace.tsx`: gestao de tipos de medicao
+- `web/src/features/measurement/pages/MeasurePage.tsx`: tela de medicao
+- `web/src/features/measurement/components/`: canvas, toolbar, painel do medico, etc.
+- `web/src/components/ui/`: componentes de UI compartilhados (Radix, inputs)
 - `web/src/lib/api.ts`: cliente HTTP com refresh automatico
 - `web/src/lib/measurementTypes.ts`: sincronizacao de tipos com a API
 
@@ -35,9 +37,9 @@
 
 ## Componentes relevantes
 
-- `Toolbar`: ferramentas de canvas e controles visuais
-- `CanvasBoard`: area principal da imagem
-- `MeasurementCanvas`: desenho das medicoes
+- `features/measurement/components/Toolbar`: ferramentas de canvas e controles visuais
+- `features/measurement/components/CanvasBoard`: area principal da imagem
+- `features/measurement/components/MeasurementCanvas`: desenho das medicoes
 - `ResultsSidebar`: resumo das medicoes registradas
 
 ## Build

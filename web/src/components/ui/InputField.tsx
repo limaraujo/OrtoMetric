@@ -1,4 +1,4 @@
-import type { AuthFormProps } from "../../types/auth";
+import type { AuthFormProps } from "../../features/auth/types";
 
 export default function InputField({
     id,

@@ -1,4 +1,4 @@
-import type { AuthMode } from "../../types/auth";
+import type { AuthMode } from "../../features/auth/types";
 
 export function AuthSwitch({ mode, onSwitch }: {
     mode: AuthMode;

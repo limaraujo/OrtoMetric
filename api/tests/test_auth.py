@@ -1,18 +1,5 @@
 import pytest
 from uuid import uuid4
-from app import app
-from extensions.db import db
-
-
-@pytest.fixture
-def client():
-    app.config["TESTING"] = True
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-
-    with app.test_client() as client:
-        with app.app_context():
-            db.create_all()
-        yield client
 
 
 # Helper para evitar repetição
@@ -23,18 +10,24 @@ def create_user_and_login(client):
     password = "TestPass@123"  # ✅ Senha válida: maiúscula, minúscula, número, especial
 
     # register
-    res = client.post("/auth/register", json={
-        "username": username,
-        "email": email,
-        "password": password
-    })
+    res = client.post(
+        "/auth/register",
+        json={
+            "username": username,
+            "email": email,
+            "password": password,
+        },
+    )
     assert res.status_code == 201
 
     # login
-    res = client.post("/auth/login", json={
-        "email": email,
-        "password": password
-    })
+    res = client.post(
+        "/auth/login",
+        json={
+            "email": email,
+            "password": password,
+        },
+    )
     assert res.status_code == 200
     return res
 
@@ -45,11 +38,14 @@ def test_register(client):
     email = f"{username}@test.com"
     password = "SecurePass@456"  # ✅ Senha válida
 
-    res = client.post("/auth/register", json={
-        "username": username,
-        "email": email,
-        "password": password
-    })
+    res = client.post(
+        "/auth/register",
+        json={
+            "username": username,
+            "email": email,
+            "password": password,
+        },
+    )
 
     assert res.status_code == 201
 
@@ -92,9 +88,12 @@ def test_logout_clears_session(client):
 
 
 def test_invalid_login(client):
-    res = client.post("/auth/login", json={
-        "email": "nonexistent@example.com",
-        "password": "wrongpassword"
-    })
+    res = client.post(
+        "/auth/login",
+        json={
+            "email": "nonexistent@example.com",
+            "password": "wrongpassword",
+        },
+    )
 
     assert res.status_code == 401

@@ -13,8 +13,8 @@ Aplicacao fullstack para medicoes radiologicas com autenticacao JWT.
 
 ```text
 OrtoMetric/
-	api/      # API Flask
-	web/      # Aplicacao React
+	api/      # API Flask (factory em api/factory.py, entrada em api/app.py)
+	web/      # Aplicacao React (features em web/src/features/)
 	docs/     # Documentacao completa
 ```
 

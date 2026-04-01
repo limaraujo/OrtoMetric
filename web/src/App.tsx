@@ -1,8 +1,8 @@
 import './App.css'
 import { Routes, Route } from "react-router-dom"
-import AuthContainer from "./pages/AuthContainer"
-import MeasurePage from "./pages/MeasurePage"
-import DoctorWorkspace from './pages/DoctorWorkspace'
+import AuthContainer from "./features/auth/AuthContainer"
+import MeasurePage from "./features/measurement/pages/MeasurePage"
+import DoctorWorkspace from './features/measurement/pages/DoctorWorkspace'
 
 export default function App() {
   return (
