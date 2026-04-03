@@ -2,6 +2,8 @@ from uuid import uuid4
 
 
 def create_user_and_login(client):
+    # Objetivo: preparar sessao autenticada para cenarios de measurement types.
+    # Regras: usa IP pseudo-aleatorio para evitar colisoes em rate limit por IP+email.
     suffix = uuid4().hex[:8]
     remote_addr = f"10.0.0.{int(suffix[:2], 16) % 250 + 1}"
     username = f"test-{suffix}"
@@ -24,6 +26,7 @@ def create_user_and_login(client):
 
 
 def test_measurement_types_get_defaults(client):
+    # Objetivo: confirmar entrega do catalogo padrao para usuario autenticado.
     create_user_and_login(client)
 
     res = client.get("/measurement-types")
@@ -35,6 +38,8 @@ def test_measurement_types_get_defaults(client):
 
 
 def test_measurement_types_sync_and_read(client):
+    # Objetivo: validar sincronizacao full-snapshot e leitura subsequente.
+    # Entrada: um tipo padrao editado + um tipo customizado.
     create_user_and_login(client)
 
     custom_item = {
@@ -70,6 +75,7 @@ def test_measurement_types_sync_and_read(client):
         headers={"X-CSRF-TOKEN": csrf_access.value if csrf_access else ""},
     )
 
+    # Saida esperada: sync persiste e leitura retorna os itens atualizados.
     assert sync_res.status_code == 200
 
     list_res = client.get("/measurement-types")

@@ -8,6 +8,7 @@ from models.measurement_type_config import MeasurementTypeCustom, MeasurementTyp
 
 
 class MeasurementTypeRepository:
+    # Camada de acesso a dados para catalogo, overrides, customizacoes e preferencia ativa.
     def __init__(self, db_ext: SQLAlchemy | None = None) -> None:
         self._db = db_ext or db
 
@@ -16,6 +17,7 @@ class MeasurementTypeRepository:
         return self._db.session
 
     def list_catalog_ids(self) -> set[str]:
+        # Usado para seed idempotente do catalogo.
         return {row.id for row in MeasurementTypeCatalog.query.all()}
 
     def add_catalog_row(self, row: MeasurementTypeCatalog) -> None:
@@ -31,9 +33,11 @@ class MeasurementTypeRepository:
         return MeasurementTypeCustom.query.filter_by(user_id=user_id).all()
 
     def delete_overrides_for_user(self, user_id: int) -> None:
+        # Limpeza total para estrategia de sincronizacao "replace-all".
         MeasurementTypeOverride.query.filter_by(user_id=user_id).delete()
 
     def delete_custom_for_user(self, user_id: int) -> None:
+        # Remove tipos customizados antigos antes de persistir nova fotografia.
         MeasurementTypeCustom.query.filter_by(user_id=user_id).delete()
 
     def add_override(
@@ -60,6 +64,7 @@ class MeasurementTypeRepository:
         return MeasurementTypePreference.query.filter_by(user_id=user_id).first()
 
     def set_active_type(self, user_id: int, active_type_id: str | None) -> None:
+        # Upsert simples da preferencia ativa por usuario.
         row = self.get_preference(user_id)
         if not row:
             self.session.add(

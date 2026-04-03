@@ -1,7 +1,10 @@
+from typing import Any
+
 from extensions.db import db
 
 
 class MeasurementTypeCatalog(db.Model):
+    # Catalogo base de tipos predefinidos compartilhados por todos os usuarios.
     __tablename__ = "measurement_type_catalog"
 
     id = db.Column(db.String(120), primary_key=True)
@@ -13,7 +16,8 @@ class MeasurementTypeCatalog(db.Model):
     created_at_label = db.Column(db.String(40), nullable=False, default="predefinido")
     severities_json = db.Column(db.Text, nullable=False, default="[]")
 
-    def to_payload(self, severities: list[dict]) -> dict:
+    def to_payload(self, severities: list[dict[str, Any]]) -> dict[str, Any]:
+        # Converte modelo de persistencia para contrato JSON esperado pela API.
         return {
             "id": self.id,
             "name": self.name,

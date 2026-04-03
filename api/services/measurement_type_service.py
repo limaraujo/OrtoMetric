@@ -13,6 +13,7 @@ from schemas.measurement_type_schema import MeasurementTypeSchema, MeasurementTy
 logger = logging.getLogger(__name__)
 
 DEFAULT_MEASUREMENT_TYPES: list[dict[str, Any]] = [
+    # Catalogo base embutido para bootstrap da aplicacao.
     {
         "id": "default-cobb-angle",
         "name": "Ângulo de Cobb",
@@ -42,10 +43,12 @@ DEFAULT_MEASUREMENT_TYPES: list[dict[str, Any]] = [
 
 
 def _to_json_payload(item: dict[str, Any]) -> str:
+    # Serializa payload preservando acentos para leitura humana no banco.
     return json.dumps(item, ensure_ascii=False)
 
 
 def _load_json_payload(raw: str) -> dict[str, Any] | None:
+    # Carrega e valida payload armazenado; invalido retorna None para ser ignorado.
     try:
         parsed = json.loads(raw)
         if not isinstance(parsed, dict):
@@ -57,10 +60,12 @@ def _load_json_payload(raw: str) -> dict[str, Any] | None:
 
 
 class MeasurementTypeService:
+    # Orquestra regras de catalogo base, customizacao por usuario e preferencia ativa.
     def __init__(self, repo: MeasurementTypeRepository) -> None:
         self._repo = repo
 
     def _seed_catalog_defaults(self) -> None:
+        # Seed idempotente: adiciona apenas itens faltantes do catalogo padrao.
         existing_ids = self._repo.list_catalog_ids()
         inserted = False
 
@@ -86,6 +91,7 @@ class MeasurementTypeService:
             self._repo.commit()
 
     def _catalog_defaults(self) -> list[dict[str, Any]]:
+        # Sempre garante seed antes de montar payload do catalogo.
         self._seed_catalog_defaults()
 
         rows = self._repo.list_catalog_rows()
@@ -102,6 +108,7 @@ class MeasurementTypeService:
         return catalog_defaults
 
     def merged_types_for_user(self, user_id: int) -> list[dict[str, Any]]:
+        # Merge final: catalogo base + overrides validos + tipos customizados.
         catalog_defaults = self._catalog_defaults()
         catalog_defaults_by_id = {item["id"]: item for item in catalog_defaults}
         catalog_default_ids = set(catalog_defaults_by_id)
@@ -127,12 +134,14 @@ class MeasurementTypeService:
     def sync_types(
         self, user_id: int, payload: dict[str, Any]
     ) -> tuple[list[dict[str, Any]] | None, str | None]:
+        # Sincronizacao full-snapshot enviada pelo frontend.
         try:
             data = MeasurementTypeSyncPayload(**payload)
         except ValidationError as err:
             return None, err.errors()
 
         parsed_types = [item.model_dump() for item in data.types]
+        # Estrategia "replace-all": limpa estado anterior e persiste nova fotografia.
         self._repo.delete_overrides_for_user(user_id)
         self._repo.delete_custom_for_user(user_id)
         catalog_defaults_by_id = {item["id"]: item for item in self._catalog_defaults()}
@@ -140,6 +149,7 @@ class MeasurementTypeService:
         for item in parsed_types:
             item_id = item["id"]
             if item_id in catalog_defaults_by_id:
+                # Persiste override apenas quando houver divergencia do padrao.
                 if item != catalog_defaults_by_id[item_id]:
                     self._repo.add_override(
                         user_id,
@@ -169,10 +179,12 @@ class MeasurementTypeService:
     def set_active_type_id(
         self, user_id: int, active_type_id: str | None
     ) -> tuple[str | None, str | None]:
+        # String vazia e tratada como "sem selecao".
         if active_type_id is not None and active_type_id.strip() == "":
             active_type_id = None
 
         if active_type_id is not None:
+            # So aceita IDs que pertencem ao conjunto visivel daquele usuario.
             all_ids = {item["id"] for item in self.merged_types_for_user(user_id)}
             if active_type_id not in all_ids:
                 return None, "activeTypeId does not exist for this user"
