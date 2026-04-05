@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Mapping
 import os
+import socket
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 
 def _normalize_database_url(database_url: str) -> str:
@@ -17,6 +19,62 @@ def _normalize_database_url(database_url: str) -> str:
         return database_url.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
 
     return database_url
+
+
+def _is_truthy_env(var_name: str, *, default: bool) -> bool:
+    raw_value = os.getenv(var_name)
+    if raw_value is None:
+        return default
+    return raw_value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _apply_ipv4_hostaddr(database_url: str) -> str:
+    # Para alguns ambientes (ex.: Render), a rota IPv6 pode falhar.
+    # Ao adicionar hostaddr com IPv4 ao DSN do libpq, evitamos fallback em AAAA.
+    try:
+        parsed = urlsplit(database_url)
+    except Exception:
+        return database_url
+
+    if not parsed.scheme.startswith("postgresql"):
+        return database_url
+
+    hostname = parsed.hostname
+    if not hostname:
+        return database_url
+
+    query_pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    if any(key == "hostaddr" for key, _ in query_pairs):
+        return database_url
+
+    try:
+        ipv4_results = socket.getaddrinfo(
+            hostname,
+            parsed.port or 5432,
+            family=socket.AF_INET,
+            type=socket.SOCK_STREAM,
+        )
+    except socket.gaierror:
+        print("[WARN] Nao foi possivel resolver IPv4 para DATABASE_URL host")
+        return database_url
+
+    if not ipv4_results:
+        print("[WARN] Host do DATABASE_URL sem endereco IPv4")
+        return database_url
+
+    hostaddr = ipv4_results[0][4][0]
+    query_pairs.append(("hostaddr", hostaddr))
+    updated_query = urlencode(query_pairs)
+
+    return urlunsplit(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            updated_query,
+            parsed.fragment,
+        )
+    )
 
 
 def resolve_database_url(config_overrides: Mapping[str, object] | None = None) -> str:
@@ -35,7 +93,14 @@ def resolve_database_url(config_overrides: Mapping[str, object] | None = None) -
             "DATABASE_URL não configurada no ambiente (Render/Prod)"
         )
 
-    return _normalize_database_url(database_url)
+    normalized_url = _normalize_database_url(database_url)
+    env_mode = os.getenv("FLASK_ENV", "development")
+    force_ipv4 = _is_truthy_env("DB_FORCE_IPV4", default=env_mode == "production")
+
+    if force_ipv4:
+        normalized_url = _apply_ipv4_hostaddr(normalized_url)
+
+    return normalized_url
 
 
 def validate_production_database(database_url: str, *, is_testing: bool) -> None:
