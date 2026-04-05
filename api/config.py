@@ -6,6 +6,13 @@ import socket
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 
+def _sanitize_database_url(database_url: str) -> str:
+    # Erro comum de colar "DATABASE_URL=..." dentro do valor da propria variavel.
+    if database_url.startswith("DATABASE_URL="):
+        return database_url[len("DATABASE_URL="):]
+    return database_url
+
+
 def _normalize_database_url(database_url: str) -> str:
     # Compatibilidade com Render/Heroku antigos
     if database_url.startswith("postgres://"):
@@ -54,7 +61,7 @@ def _apply_ipv4_hostaddr(database_url: str) -> str:
             type=socket.SOCK_STREAM,
         )
         if ipv4_results:
-            hostaddr = ipv4_results[0][4][0]
+            hostaddr = str(ipv4_results[0][4][0])
             query_pairs.append(("hostaddr", hostaddr))
             print(f"[INFO] Forçando IPv4: {hostaddr}")
             updated_query = urlencode(query_pairs)
@@ -76,7 +83,7 @@ def _apply_ipv4_hostaddr(database_url: str) -> str:
         for result in all_results:
             # AF_INET = IPv4
             if result[0] == socket.AF_INET:
-                hostaddr = result[4][0]
+                hostaddr = str(result[4][0])
                 query_pairs.append(("hostaddr", hostaddr))
                 print(f"[INFO] IPv4 encontrado via AF_UNSPEC: {hostaddr}")
                 updated_query = urlencode(query_pairs)
@@ -107,12 +114,24 @@ def resolve_database_url(config_overrides: Mapping[str, object] | None = None) -
             "DATABASE_URL não configurada no ambiente (Render/Prod)"
         )
 
-    normalized_url = _normalize_database_url(database_url)
+    sanitized_url = _sanitize_database_url(database_url)
+    normalized_url = _normalize_database_url(sanitized_url)
     env_mode = os.getenv("FLASK_ENV", "development")
     force_ipv4 = _is_truthy_env("DB_FORCE_IPV4", default=env_mode == "production")
 
     if force_ipv4:
-        normalized_url = _apply_ipv4_hostaddr(normalized_url)
+        # Permite URL alternativa já em endpoint IPv4 (ex.: Supabase pooler).
+        database_url_ipv4 = os.getenv("DATABASE_URL_IPV4", "").strip()
+        if database_url_ipv4:
+            return _normalize_database_url(_sanitize_database_url(database_url_ipv4))
+
+        resolved_url = _apply_ipv4_hostaddr(normalized_url)
+        if resolved_url == normalized_url:
+            raise RuntimeError(
+                "DB_FORCE_IPV4 ativo, mas o host de DATABASE_URL nao possui IPv4 resolvivel neste ambiente. "
+                "Defina DATABASE_URL_IPV4 com endpoint pooler IPv4 (Supabase Session/Transaction Pooler)."
+            )
+        normalized_url = resolved_url
 
     return normalized_url
 
