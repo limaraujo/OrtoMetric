@@ -6,7 +6,7 @@ services:
 
     buildCommand: pip install -r requirements.txt
 
-    startCommand: flask --app wsgi db upgrade && gunicorn wsgi:app --bind 0.0.0.0:$PORT
+    startCommand: gunicorn -b 0.0.0.0:$PORT wsgi:app --log-level debug --capture-output --enable-stdio-inheritance
 
     envVars:
       - key: PYTHON_VERSION
