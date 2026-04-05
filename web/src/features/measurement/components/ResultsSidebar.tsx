@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FileDown, Ruler, Settings2 } from 'lucide-react';
 import { isAxiosError } from 'axios';
+import { clearAccessToken } from '../../../lib/api';
 import type { DistanceCalibration, Measurement } from '../types/measurement';
 import type { MeasurementTypeItem } from '../../../lib/measurementTypes';
 import {
@@ -106,7 +107,9 @@ export function ResultsSidebar({
       });
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 401) {
+        clearAccessToken();
         setExportError('Sessao expirada. Faca login novamente para exportar relatorios.');
+        window.location.assign('/login');
       } else {
         setExportError('Nao foi possivel exportar o PDF. Tente novamente.');
       }
@@ -126,7 +129,9 @@ export function ResultsSidebar({
       });
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 401) {
+        clearAccessToken();
         setExportError('Sessao expirada. Faca login novamente para exportar relatorios.');
+        window.location.assign('/login');
       } else {
         setExportError('Nao foi possivel exportar o TXT. Tente novamente.');
       }

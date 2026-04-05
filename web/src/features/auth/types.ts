@@ -22,6 +22,8 @@ export type AuthFormData = {
 
 export type LoginResponse = {
     accessToken?: string;
+    csrfAccessToken?: string;
+    csrfRefreshToken?: string;
     user: {
         id: number;
         username: string;

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { isAxiosError } from "axios";
-import api, { setAccessToken } from "../../lib/api";
+import api, { setAccessToken, setCsrfAccessToken, setCsrfRefreshToken } from "../../lib/api";
 import { AuthForm } from "./AuthForm";
 import type { AuthFormData, AuthMode, LoginResponse } from "./types";
 
@@ -100,6 +100,12 @@ export default function AuthContainer() {
 
       const accessToken = loginResponse.data?.accessToken;
       setAccessToken(typeof accessToken === "string" ? accessToken : null);
+
+      const csrfAccessToken = loginResponse.data?.csrfAccessToken;
+      setCsrfAccessToken(typeof csrfAccessToken === "string" ? csrfAccessToken : null);
+
+      const csrfRefreshToken = loginResponse.data?.csrfRefreshToken;
+      setCsrfRefreshToken(typeof csrfRefreshToken === "string" ? csrfRefreshToken : null);
 
       navigate("/dashboard");
     } catch (err) {

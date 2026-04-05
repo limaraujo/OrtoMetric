@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { isAxiosError } from 'axios'
 import { Toolbar } from '../components/Toolbar'
 import { useMeasurement } from '../hooks/useMeasurement'
 import { useImageCanvas } from '../hooks/useImageCanvas'
 import { CanvasBoard } from '../components/CanvasBoard'
 import type { CanvasBoardHandle } from '../components/CanvasBoard'
 import { ResultsSidebar } from '../components/ResultsSidebar'
-import api from '../../../lib/api'
+import api, { clearAccessToken } from '../../../lib/api'
 import {
   loadAllMeasurementTypes,
   loadActiveMeasurementTypeId,
@@ -32,13 +33,18 @@ export default function InterfacePage() {
         const fallback = loaded[0]?.id ?? ''
         const resolved = loaded.some((t) => t.id === activeTypeId) ? (activeTypeId ?? fallback) : fallback
         setSelectedTypeId(resolved)
-      } catch {
+      } catch (error) {
+        if (isAxiosError(error) && error.response?.status === 401) {
+          clearAccessToken()
+          navigate('/login')
+          return
+        }
         setTypesError('Falha ao carregar tipos de medição do servidor.')
       }
     }
 
     void loadTypes()
-  }, [])
+  }, [navigate])
 
   useEffect(() => {
     if (!selectedTypeId) return
@@ -46,19 +52,25 @@ export default function InterfacePage() {
     const persistSelection = async () => {
       try {
         await saveActiveMeasurementTypeId(selectedTypeId)
-      } catch {
+      } catch (error) {
+        if (isAxiosError(error) && error.response?.status === 401) {
+          clearAccessToken()
+          navigate('/login')
+          return
+        }
         setTypesError('Falha ao salvar tipo ativo no servidor.')
       }
     }
 
     void persistSelection()
-  }, [selectedTypeId])
+  }, [navigate, selectedTypeId])
 
   useEffect(() => {
     const verifySession = async () => {
       try {
         await api.get('/auth/me')
       } catch {
+        clearAccessToken()
         navigate('/login')
       }
     }

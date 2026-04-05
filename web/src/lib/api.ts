@@ -1,6 +1,8 @@
 import axios from "axios";
 
 const ACCESS_TOKEN_STORAGE_KEY = "ortometric_access_token";
+const CSRF_ACCESS_TOKEN_STORAGE_KEY = "ortometric_csrf_access_token";
+const CSRF_REFRESH_TOKEN_STORAGE_KEY = "ortometric_csrf_refresh_token";
 
 const apiBaseUrl = import.meta.env.VITE_API_URL;
 
@@ -48,6 +50,40 @@ export function setAccessToken(token: string | null): void {
     window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token);
 }
 
+export function setCsrfAccessToken(token: string | null): void {
+    if (typeof window === "undefined") return;
+
+    if (!token) {
+        window.localStorage.removeItem(CSRF_ACCESS_TOKEN_STORAGE_KEY);
+        return;
+    }
+
+    window.localStorage.setItem(CSRF_ACCESS_TOKEN_STORAGE_KEY, token);
+}
+
+export function setCsrfRefreshToken(token: string | null): void {
+    if (typeof window === "undefined") return;
+
+    if (!token) {
+        window.localStorage.removeItem(CSRF_REFRESH_TOKEN_STORAGE_KEY);
+        return;
+    }
+
+    window.localStorage.setItem(CSRF_REFRESH_TOKEN_STORAGE_KEY, token);
+}
+
+function getCsrfAccessToken(): string | null {
+    if (typeof window === "undefined") return null;
+    const token = window.localStorage.getItem(CSRF_ACCESS_TOKEN_STORAGE_KEY);
+    return token && token.trim().length > 0 ? token : null;
+}
+
+function getCsrfRefreshToken(): string | null {
+    if (typeof window === "undefined") return null;
+    const token = window.localStorage.getItem(CSRF_REFRESH_TOKEN_STORAGE_KEY);
+    return token && token.trim().length > 0 ? token : null;
+}
+
 export function getAccessToken(): string | null {
     if (typeof window === "undefined") return null;
     const token = window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
@@ -56,6 +92,8 @@ export function getAccessToken(): string | null {
 
 export function clearAccessToken(): void {
     setAccessToken(null);
+    setCsrfAccessToken(null);
+    setCsrfRefreshToken(null);
 }
 
 let refreshPromise: Promise<void> | null = null;
@@ -77,9 +115,9 @@ function isWriteMethod(method?: string): boolean {
 
 function resolveCsrfToken(url?: string): string | null {
     if ((url ?? "").includes("/auth/refresh")) {
-        return readCookie("csrf_refresh_token");
+        return readCookie("csrf_refresh_token") ?? getCsrfRefreshToken();
     }
-    return readCookie("csrf_access_token");
+    return readCookie("csrf_access_token") ?? getCsrfAccessToken();
 }
 
 async function ensureSingleRefresh(): Promise<void> {
@@ -90,6 +128,22 @@ async function ensureSingleRefresh(): Promise<void> {
                 const maybeAccessToken = response?.data?.accessToken;
                 if (typeof maybeAccessToken === "string" && maybeAccessToken.trim().length > 0) {
                     setAccessToken(maybeAccessToken);
+                }
+
+                const maybeCsrfAccessToken = response?.data?.csrfAccessToken;
+                if (
+                    typeof maybeCsrfAccessToken === "string" &&
+                    maybeCsrfAccessToken.trim().length > 0
+                ) {
+                    setCsrfAccessToken(maybeCsrfAccessToken);
+                }
+
+                const maybeCsrfRefreshToken = response?.data?.csrfRefreshToken;
+                if (
+                    typeof maybeCsrfRefreshToken === "string" &&
+                    maybeCsrfRefreshToken.trim().length > 0
+                ) {
+                    setCsrfRefreshToken(maybeCsrfRefreshToken);
                 }
                 return undefined;
             })

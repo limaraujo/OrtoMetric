@@ -21,6 +21,9 @@ services:
       - key: DATABASE_URL_IPV4
         sync: false
 
+      - key: DB_FORCE_IPV4
+        value: "true"
+
       - key: SECRET_KEY
         sync: false
 

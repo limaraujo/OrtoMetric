@@ -88,6 +88,10 @@ function resolveSyncErrorMessage(error: unknown): string {
         return "Falha ao sincronizar com o servidor. Tente novamente.";
     }
 
+    if (error.response?.status === 401) {
+        return "Sessao expirada. Faca login novamente.";
+    }
+
     const fallback = "Falha ao sincronizar com o servidor. Tente novamente.";
     const payload = error.response?.data as { error?: unknown } | undefined;
     const details = payload?.error;
@@ -145,6 +149,7 @@ export function useDoctorWorkspace() {
                 setTypes(loaded);
                 setSelectedId(activeId);
             } catch {
+                clearAccessToken();
                 navigate("/login");
             } finally {
                 setIsLoadingTypes(false);
@@ -220,7 +225,12 @@ export function useDoctorWorkspace() {
 
         try {
             await saveActiveMeasurementTypeId(nextSelection);
-        } catch {
+        } catch (error) {
+            if (isAxiosError(error) && error.response?.status === 401) {
+                clearAccessToken();
+                navigate("/login");
+                return;
+            }
             setSelectedId(previousSelection);
             setFormError("Falha ao persistir o tipo ativo no servidor. Tente novamente.");
         } finally {
@@ -287,6 +297,11 @@ export function useDoctorWorkspace() {
                     : "Tipo de medição adicionado com sucesso.",
             );
         } catch (error) {
+            if (isAxiosError(error) && error.response?.status === 401) {
+                clearAccessToken();
+                navigate("/login");
+                return;
+            }
             setFormError(resolveSyncErrorMessage(error));
         }
     }
@@ -307,6 +322,11 @@ export function useDoctorWorkspace() {
             const synced = await saveAllMeasurementTypes(nextTypes);
             setTypes(synced);
         } catch (error) {
+            if (isAxiosError(error) && error.response?.status === 401) {
+                clearAccessToken();
+                navigate("/login");
+                return;
+            }
             setFormError(resolveSyncErrorMessage(error));
             return;
         }
