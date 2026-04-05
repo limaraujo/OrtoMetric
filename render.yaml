@@ -6,7 +6,7 @@ services:
 
     buildCommand: pip install -r requirements.txt
 
-    startCommand: python wsgi.py
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 1 --access-logfile - --error-logfile - --log-level debug
 
     envVars:
       - key: PYTHON_VERSION
