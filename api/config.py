@@ -124,6 +124,12 @@ def resolve_database_url(config_overrides: Mapping[str, object] | None = None) -
 
     sanitized_url = _sanitize_database_url(database_url)
     normalized_url = _normalize_database_url(sanitized_url)
+
+    # Em cenarios com override (ex.: testes), a URL fornecida explicitamente
+    # deve vencer qualquer regra de ambiente como DB_FORCE_IPV4.
+    if override_database_url is not None:
+        return normalized_url
+
     env_mode = os.getenv("FLASK_ENV", "development")
     force_ipv4 = _is_truthy_env("DB_FORCE_IPV4", default=env_mode == "production")
 

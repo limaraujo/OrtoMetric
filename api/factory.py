@@ -99,7 +99,22 @@ def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
 
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_options
 
-    jwt_secret = os.getenv("JWT_SECRET_KEY") or os.getenv("SECRET_KEY")
+    override_jwt_secret = None
+    override_secret_key = None
+    if config_overrides is not None:
+        jwt_override_value = config_overrides.get("JWT_SECRET_KEY")
+        secret_override_value = config_overrides.get("SECRET_KEY")
+        if jwt_override_value:
+            override_jwt_secret = str(jwt_override_value)
+        if secret_override_value:
+            override_secret_key = str(secret_override_value)
+
+    jwt_secret = (
+        override_jwt_secret
+        or os.getenv("JWT_SECRET_KEY")
+        or override_secret_key
+        or os.getenv("SECRET_KEY")
+    )
 
     if env_mode == "production" and not jwt_secret:
         raise RuntimeError("JWT_SECRET_KEY não configurado em produção")

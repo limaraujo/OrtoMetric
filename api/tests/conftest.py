@@ -13,6 +13,7 @@ def app():
         {
             "TESTING": True,
             "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "JWT_SECRET_KEY": "test-secret-key-with-at-least-32-bytes!!",
             "RATELIMIT_ENABLED": False,
         }
     )
