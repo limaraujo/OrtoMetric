@@ -41,7 +41,7 @@ export function MeasurementTypeFormPanel({
     <TooltipProvider>
       <div
         ref={formRef}
-        className="space-y-5 rounded-2xl border border-border bg-card/70 p-5 md:p-7"
+        className="space-y-5 rounded-2xl border border-border bg-card/70 p-5 md:p-7 flex-1 min-h-0 overflow-y-auto"
       >
         <h2 className="text-base font-semibold">
           {editingId ? "Editando tipo de medição" : "Novo tipo de medição"}

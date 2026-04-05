@@ -34,7 +34,7 @@ export default function DoctorWorkspace() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <main className="mx-auto w-full max-w-screen-2xl p-4 md:p-6">
+      <main className="mx-auto flex h-screen w-full max-w-screen-2xl flex-col p-4 md:p-6">
         {/* Top bar */}
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -68,7 +68,7 @@ export default function DoctorWorkspace() {
         </div>
 
         {/* Main grid */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
 
           {/* ── Form panel ───────────────────────────────────────────────── */}
           <MeasurementTypeFormPanel
