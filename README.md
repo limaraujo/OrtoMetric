@@ -86,6 +86,14 @@ cd api
 pytest -q
 ```
 
+## Deploy
+
+- Frontend (Vercel): `web/`
+- Backend (Render): `api/` com `gunicorn wsgi:app`
+- Banco: Supabase PostgreSQL (`DATABASE_URL` com `sslmode=require`)
+
+Guia completo em [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 ## Documentacao Completa
 
 - [docs/README.md](docs/README.md)

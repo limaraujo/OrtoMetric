@@ -1,12 +1,13 @@
 import axios from "axios";
 
-function resolveDefaultApiBaseUrl(): string {
-    if (typeof window === "undefined") return "http://localhost:5000";
-    return `${window.location.protocol}//${window.location.hostname}:5000`;
+const apiBaseUrl = import.meta.env.VITE_API_URL;
+
+if (!apiBaseUrl) {
+    throw new Error("VITE_API_URL is required");
 }
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL ?? resolveDefaultApiBaseUrl(),
+    baseURL: apiBaseUrl,
     withCredentials: true,
     headers: {
         "Content-Type": "application/json",

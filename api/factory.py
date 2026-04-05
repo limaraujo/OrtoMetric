@@ -8,7 +8,9 @@ from typing import Mapping
 from flask import Flask, Response, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from flask_migrate import Migrate
 
+from config import resolve_database_url, validate_production_database
 import models  # noqa: F401 — registra modelos no metadata do SQLAlchemy #type: ignore
 from extensions.db import db
 from extensions.limiter import limiter
@@ -31,31 +33,20 @@ def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
     app = Flask(__name__)
 
     env_mode = os.getenv("FLASK_ENV", "development")
-    override_database_url = None
-    if config_overrides is not None:
-        override_value = config_overrides.get("SQLALCHEMY_DATABASE_URI")
-        if override_value:
-            override_database_url = str(override_value)
-
-    database_url = override_database_url or os.getenv("DATABASE_URL")
-    if not database_url:
-        raise ValueError(
-            "DATABASE_URL must be set (or SQLALCHEMY_DATABASE_URI in config_overrides)"
-        )
-
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    is_testing = bool(config_overrides and config_overrides.get("TESTING"))
+    database_url = resolve_database_url(config_overrides)
+    validate_production_database(database_url, is_testing=is_testing)
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
+    jwt_secret = os.getenv("JWT_SECRET_KEY") or os.getenv("SECRET_KEY")
     # Em producao, impede subir sem segredo JWT explicito.
-    if env_mode == "production" and not os.getenv("JWT_SECRET_KEY"):
-        raise ValueError("JWT_SECRET_KEY must be set in production environment")
+    if env_mode == "production" and not jwt_secret:
+        raise ValueError("JWT_SECRET_KEY or SECRET_KEY must be set in production environment")
 
     # Em dev usa fallback para facilitar setup; em prod exige valor real.
-    app.config["JWT_SECRET_KEY"] = os.getenv(
-        "JWT_SECRET_KEY",
-        "dev-only-jwt-secret-key-with-32-plus-bytes" if env_mode != "production" else None,
+    app.config["JWT_SECRET_KEY"] = jwt_secret or (
+        "dev-only-jwt-secret-key-with-32-plus-bytes" if env_mode != "production" else None
     )
 
     # Janela de expiracao configuravel para balancear UX e seguranca.
@@ -81,6 +72,7 @@ def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
 
     # Inicializa extensoes compartilhadas.
     db.init_app(app)
+    Migrate(app, db)
     JWTManager(app)
     limiter.init_app(app)
 
@@ -117,6 +109,10 @@ def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
     def home():
         # Health endpoint simples para verificar app ativo.
         return jsonify({"message": "Welcome to the API!"})
+
+    @app.route("/health")
+    def health():
+        return jsonify({"status": "ok"})
 
     @app.after_request
     def apply_security_headers(response: Response) -> Response:
