@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FileDown, Ruler, Settings2 } from 'lucide-react';
+import { isAxiosError } from 'axios';
 import type { DistanceCalibration, Measurement } from '../types/measurement';
 import type { MeasurementTypeItem } from '../../../lib/measurementTypes';
 import {
@@ -51,6 +52,7 @@ export function ResultsSidebar({
   const [includeScale, setIncludeScale] = useState(true);
   const [conclusions, setConclusions] = useState('');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [exportError, setExportError] = useState('');
   const [fieldsByMeasurementId, setFieldsByMeasurementId] =
     useState<Record<string, MeasurementPdfFieldSelection>>({});
 
@@ -78,6 +80,7 @@ export function ResultsSidebar({
 
   const handleExportPdf = async () => {
     setIsExportingPdf(true);
+    setExportError('');
 
     try {
       const annotatedImageDataUrl = includeImage ? await onRequestAnnotatedImage() : null;
@@ -101,8 +104,32 @@ export function ResultsSidebar({
           fieldsByMeasurementId,
         },
       });
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 401) {
+        setExportError('Sessao expirada. Faca login novamente para exportar relatorios.');
+      } else {
+        setExportError('Nao foi possivel exportar o PDF. Tente novamente.');
+      }
     } finally {
       setIsExportingPdf(false);
+    }
+  };
+
+  const handleExportTxt = async () => {
+    setExportError('');
+    try {
+      await exportTxtReport({
+        imageName,
+        measurements,
+        types,
+        distanceCalibration,
+      });
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 401) {
+        setExportError('Sessao expirada. Faca login novamente para exportar relatorios.');
+      } else {
+        setExportError('Nao foi possivel exportar o TXT. Tente novamente.');
+      }
     }
   };
 
@@ -118,12 +145,7 @@ export function ResultsSidebar({
           <button
             type="button"
             onClick={() => {
-              void exportTxtReport({
-                imageName,
-                measurements,
-                types,
-                distanceCalibration,
-              });
+              void handleExportTxt();
             }}
             className="clinical-button clinical-button-ghost w-full justify-center px-2"
           >
@@ -179,6 +201,12 @@ export function ResultsSidebar({
           distanceCalibration={distanceCalibration}
           onDeleteMeasurement={onDeleteMeasurement}
         />
+
+        {exportError && (
+          <p className="rounded-lg border border-destructive/35 bg-destructive/15 px-3 py-2 text-sm text-red-200">
+            {exportError}
+          </p>
+        )}
 
         {measurements.length === 0 && (
           <p className="text-sm text-muted-foreground">Nenhuma medição registrada.</p>
