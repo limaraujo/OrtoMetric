@@ -21,6 +21,7 @@ export type AuthFormData = {
 };
 
 export type LoginResponse = {
+    accessToken?: string;
     user: {
         id: number;
         username: string;

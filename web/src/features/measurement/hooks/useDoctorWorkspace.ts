@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { isAxiosError } from "axios";
-import api from "../../../lib/api";
+import api, { clearAccessToken } from "../../../lib/api";
 import {
     defaultMeasurementTypes,
     generateMeasurementTypeId,
@@ -329,6 +329,7 @@ export function useDoctorWorkspace() {
         } catch {
             // Navega para login mesmo se a sessão já estiver inválida no servidor.
         }
+        clearAccessToken();
         navigate("/login");
     }
 

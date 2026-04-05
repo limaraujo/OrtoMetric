@@ -1,5 +1,7 @@
 import axios from "axios";
 
+const ACCESS_TOKEN_STORAGE_KEY = "ortometric_access_token";
+
 const apiBaseUrl = import.meta.env.VITE_API_URL;
 
 if (!apiBaseUrl) {
@@ -35,6 +37,27 @@ const api = axios.create({
     },
 });
 
+export function setAccessToken(token: string | null): void {
+    if (typeof window === "undefined") return;
+
+    if (!token) {
+        window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+        return;
+    }
+
+    window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token);
+}
+
+export function getAccessToken(): string | null {
+    if (typeof window === "undefined") return null;
+    const token = window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
+    return token && token.trim().length > 0 ? token : null;
+}
+
+export function clearAccessToken(): void {
+    setAccessToken(null);
+}
+
 let refreshPromise: Promise<void> | null = null;
 
 function readCookie(name: string): string | null {
@@ -63,7 +86,13 @@ async function ensureSingleRefresh(): Promise<void> {
     if (!refreshPromise) {
         refreshPromise = api
             .post("/auth/refresh", {})
-            .then(() => undefined)
+            .then((response) => {
+                const maybeAccessToken = response?.data?.accessToken;
+                if (typeof maybeAccessToken === "string" && maybeAccessToken.trim().length > 0) {
+                    setAccessToken(maybeAccessToken);
+                }
+                return undefined;
+            })
             .finally(() => {
                 refreshPromise = null;
             });
@@ -73,6 +102,11 @@ async function ensureSingleRefresh(): Promise<void> {
 }
 
 api.interceptors.request.use((config) => {
+    const bearerToken = getAccessToken();
+    if (bearerToken) {
+        config.headers.Authorization = `Bearer ${bearerToken}`;
+    }
+
     if (isWriteMethod(config.method)) {
         const csrfToken = resolveCsrfToken(config.url);
         if (csrfToken) {
@@ -102,6 +136,7 @@ api.interceptors.response.use(
                 await ensureSingleRefresh();
                 return api(originalRequest);
             } catch {
+                clearAccessToken();
                 return Promise.reject(error);
             }
         }

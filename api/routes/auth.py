@@ -120,6 +120,7 @@ def login():
         {
             # Retorna dados publicos do usuario autenticado.
             # Nao inclui senha/hash ou campos sensiveis.
+            "accessToken": access_token,
             "user": UserResponse(
                 id=user.id,
                 username=user.username,
@@ -140,7 +141,7 @@ def refresh():
     # Gera novo access token sem exigir novo login.
     user_id = str(get_jwt_identity())
     access_token = create_access_token(identity=user_id)
-    response = jsonify({"ok": True})
+    response = jsonify({"ok": True, "accessToken": access_token})
     set_access_cookies(response, access_token)
     logger.info("refresh_success user_id=%s", user_id)
     return response, 200

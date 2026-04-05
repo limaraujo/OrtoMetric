@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { isAxiosError } from "axios";
-import api from "../../lib/api";
+import api, { setAccessToken } from "../../lib/api";
 import { AuthForm } from "./AuthForm";
 import type { AuthFormData, AuthMode, LoginResponse } from "./types";
 
@@ -93,10 +93,13 @@ export default function AuthContainer() {
         await api.post("/auth/register", form);
       }
 
-      await api.post<LoginResponse>("/auth/login", {
+      const loginResponse = await api.post<LoginResponse>("/auth/login", {
         email: form.email,
         password: form.password,
       });
+
+      const accessToken = loginResponse.data?.accessToken;
+      setAccessToken(typeof accessToken === "string" ? accessToken : null);
 
       navigate("/dashboard");
     } catch (err) {
