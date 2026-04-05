@@ -23,6 +23,20 @@ from services.measurement_type_service import MeasurementTypeService
 from services.user_service import UserService
 
 
+def _resolve_cors_origins() -> list[str]:
+    raw_origins = os.getenv(
+        "FRONTEND_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    )
+    origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+
+    origin_regex = os.getenv("FRONTEND_ORIGIN_REGEX", "").strip()
+    if origin_regex:
+        origins.append(origin_regex)
+
+    return origins
+
+
 def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
     logging.basicConfig(
         level=os.getenv("LOG_LEVEL", "INFO"),
@@ -86,10 +100,7 @@ def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
 
     CORS(
         app,
-        origins=[o.strip() for o in os.getenv(
-            "FRONTEND_ORIGINS",
-            "http://localhost:5173,http://127.0.0.1:5173",
-        ).split(",")],
+        origins=_resolve_cors_origins(),
         supports_credentials=True,
     )
 
