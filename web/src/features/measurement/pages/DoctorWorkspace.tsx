@@ -33,8 +33,8 @@ export default function DoctorWorkspace() {
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <main className="mx-auto flex h-screen w-full max-w-screen-2xl flex-col p-4 md:p-6">
+    <div className="h-dvh overflow-hidden bg-background text-foreground">
+      <main className="mx-auto flex h-full w-full max-w-screen-2xl flex-col p-4 md:p-6">
         {/* Top bar */}
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>

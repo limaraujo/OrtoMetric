@@ -17,7 +17,7 @@ export function MeasurementTypeListPanel({
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card/70 p-5 md:p-7 flex-1 min-h-0 overflow-y-auto" aria-busy={isPersistingSelection}>
+    <div className="panel-scrollbar rounded-2xl border border-border bg-card/70 p-5 md:p-7 flex-1 min-h-0 overflow-y-auto" aria-busy={isPersistingSelection}>
       <h2 className="mb-4 text-base font-semibold">
         Tipos cadastrados
         <span className="ml-2 text-sm font-normal text-muted-foreground">({types.length})</span>
