@@ -8,6 +8,14 @@ def _normalize_database_url(database_url: str) -> str:
     # Compatibilidade com Render/Heroku antigos
     if database_url.startswith("postgres://"):
         return database_url.replace("postgres://", "postgresql://", 1)
+
+    # Força o driver psycopg (v3) e evita fallback para psycopg2
+    if database_url.startswith("postgresql://"):
+        return database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+    if database_url.startswith("postgresql+psycopg2://"):
+        return database_url.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
+
     return database_url
 
 
@@ -39,7 +47,9 @@ def validate_production_database(database_url: str, *, is_testing: bool) -> None
 
     # Apenas warning, não bloqueia startup
     if env_mode == "production":
-        if not database_url.startswith("postgresql://"):
+        if not database_url.startswith("postgresql://") and not database_url.startswith(
+            "postgresql+psycopg://"
+        ):
             print("[WARN] DATABASE_URL não parece PostgreSQL")
 
         if "sslmode=require" not in database_url:
