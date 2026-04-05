@@ -37,6 +37,18 @@ def _resolve_cors_origins() -> list[str]:
     return origins
 
 
+def _parse_positive_int_env(name: str, default: int) -> int:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+
+    try:
+        value = int(raw_value)
+        return value if value > 0 else default
+    except ValueError:
+        return default
+
+
 def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
     logging.basicConfig(
         level=os.getenv("LOG_LEVEL", "INFO"),
@@ -58,7 +70,33 @@ def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
     validate_production_database(database_url, is_testing=is_testing)
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
+
+    engine_options: dict[str, object] = {"pool_pre_ping": True}
+    if database_url.startswith("postgresql"):
+        # Defaults mais conservadores no deploy para evitar estourar limite
+        # de conexoes em bancos gerenciados com capacidade reduzida.
+        default_pool_size = 2 if env_mode == "production" else 5
+        default_max_overflow = 1 if env_mode == "production" else 10
+
+        engine_options.update(
+            {
+                "pool_size": _parse_positive_int_env(
+                    "SQLALCHEMY_POOL_SIZE", default_pool_size
+                ),
+                "max_overflow": _parse_positive_int_env(
+                    "SQLALCHEMY_MAX_OVERFLOW", default_max_overflow
+                ),
+                "pool_timeout": _parse_positive_int_env(
+                    "SQLALCHEMY_POOL_TIMEOUT_SECONDS", 30
+                ),
+                "pool_recycle": _parse_positive_int_env(
+                    "SQLALCHEMY_POOL_RECYCLE_SECONDS", 1800
+                ),
+                "pool_use_lifo": True,
+            }
+        )
+
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_options
 
     jwt_secret = os.getenv("JWT_SECRET_KEY") or os.getenv("SECRET_KEY")
 

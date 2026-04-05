@@ -74,4 +74,8 @@ class MeasurementTypeRepository:
             row.active_type_id = active_type_id
 
     def commit(self) -> None:
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise

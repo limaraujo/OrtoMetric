@@ -35,4 +35,8 @@ class UserRepository:
         self.session.add(user)
 
     def commit(self) -> None:
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
