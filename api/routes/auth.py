@@ -7,6 +7,8 @@ from flask_limiter.errors import RateLimitExceeded
 from flask_limiter.util import get_remote_address
 from flask_jwt_extended import (
     create_access_token, # type: ignore
+    get_csrf_token,
+    get_jwt,
     get_jwt_identity,
     jwt_required, # type: ignore
     set_access_cookies, # type: ignore
@@ -121,6 +123,8 @@ def login():
             # Retorna dados publicos do usuario autenticado.
             # Nao inclui senha/hash ou campos sensiveis.
             "accessToken": access_token,
+            "csrfAccessToken": get_csrf_token(access_token),
+            "csrfRefreshToken": get_csrf_token(refresh_token),
             "user": UserResponse(
                 id=user.id,
                 username=user.username,
@@ -141,7 +145,15 @@ def refresh():
     # Gera novo access token sem exigir novo login.
     user_id = str(get_jwt_identity())
     access_token = create_access_token(identity=user_id)
-    response = jsonify({"ok": True, "accessToken": access_token})
+    refresh_claims = get_jwt()
+    response = jsonify(
+        {
+            "ok": True,
+            "accessToken": access_token,
+            "csrfAccessToken": get_csrf_token(access_token),
+            "csrfRefreshToken": refresh_claims.get("csrf"),
+        }
+    )
     set_access_cookies(response, access_token)
     logger.info("refresh_success user_id=%s", user_id)
     return response, 200
