@@ -10,6 +10,8 @@ export interface Line {
   id: string;
 }
 
+export type PointAppearanceMode = 'full' | 'center' | 'hidden';
+
 export interface CobbMeasurement {
   id: string;
   upperLine: Line;
@@ -22,6 +24,13 @@ export interface CobbMeasurement {
   lineColor?: string;
   lineWidth?: number;
   labelFontSize?: number;
+  pointColor?: string;
+  pointSize?: number;
+  pointBorderColor?: string;
+  pointBorderWidth?: number;
+  pointFontSize?: number;
+  pointAppearance?: PointAppearanceMode;
+  pointLabelVisible?: boolean;
 }
 
 export interface DistanceMeasurement {
@@ -35,6 +44,13 @@ export interface DistanceMeasurement {
   lineColor?: string;
   lineWidth?: number;
   labelFontSize?: number;
+  pointColor?: string;
+  pointSize?: number;
+  pointBorderColor?: string;
+  pointBorderWidth?: number;
+  pointFontSize?: number;
+  pointAppearance?: PointAppearanceMode;
+  pointLabelVisible?: boolean;
 }
 
 export interface DistanceCalibration {

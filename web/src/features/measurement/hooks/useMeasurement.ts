@@ -1,5 +1,13 @@
 import { useState, useCallback, useRef } from 'react';
-import type { Point, CobbMeasurement, DistanceMeasurement, Measurement, MeasurementState, HistoryAction } from '../types/measurement';
+import type {
+  Point,
+  CobbMeasurement,
+  DistanceMeasurement,
+  Measurement,
+  MeasurementState,
+  HistoryAction,
+  PointAppearanceMode,
+} from '../types/measurement';
 import { isCobb, isDistance } from '../types/measurement';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -314,6 +322,51 @@ export function useMeasurement() {
     });
   }, [saveHistory]);
 
+  const updatePointStyle = useCallback((
+    measurementId: string,
+    pointColor: string,
+    pointSize: number,
+    pointBorderColor: string,
+    pointBorderWidth: number,
+    pointFontSize: number,
+    pointAppearance: PointAppearanceMode,
+    pointLabelVisible: boolean,
+  ) => {
+    setState(prev => {
+      const nextPointSize = Math.max(4, Math.min(24, pointSize));
+      const nextPointBorderWidth = Math.max(1, Math.min(8, pointBorderWidth));
+      const nextPointFontSize = Math.max(8, Math.min(28, pointFontSize));
+      const updatedMeasurements = prev.measurements.map(m =>
+        m.id === measurementId
+          ? {
+            ...m,
+            pointColor,
+            pointSize: nextPointSize,
+            pointBorderColor,
+            pointBorderWidth: nextPointBorderWidth,
+            pointFontSize: nextPointFontSize,
+            pointAppearance,
+            pointLabelVisible,
+          }
+          : m
+      );
+      const updatedMeasurement = updatedMeasurements.find(m => m.id === measurementId);
+
+      if (!updatedMeasurement) return prev;
+
+      saveHistory({
+        type: 'update_measurement_style',
+        payload: updatedMeasurement,
+        previousState: prev,
+      });
+
+      return {
+        ...prev,
+        measurements: updatedMeasurements,
+      };
+    });
+  }, [saveHistory]);
+
   const removeMeasurement = useCallback((measurementId: string) => {
     setState(prev => {
       const target = prev.measurements.find(m => m.id === measurementId);
@@ -405,6 +458,7 @@ export function useMeasurement() {
     moveAngleLabel,
     updateMeasurementStyle,
     updateMeasurementLabelFontSize,
+    updatePointStyle,
     removeMeasurement,
     clearAll,
     undo,

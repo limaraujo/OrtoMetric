@@ -5,8 +5,11 @@ import {
     DEFAULT_ANGLE_FONT_SIZE,
     DEFAULT_DISTANCE_FONT_SIZE,
     LINE_WIDTH,
+    POINT_BORDER_COLOR,
+    POINT_COLOR,
     POINT_BORDER,
     POINT_RADIUS,
+    POINT_FONT_SIZE,
 } from "./constants";
 
 type RenderParams = {
@@ -55,10 +58,6 @@ export function renderMeasurementCanvas({
         y: (p.y - containerHeight / 2) * zoom + containerHeight / 2 + panY,
     });
 
-    const scaledPointRadius = POINT_RADIUS * zoom;
-    const scaledPointBorder = POINT_BORDER * zoom;
-    const scaledPointFontSize = 10 * zoom;
-
     const drawLine = (
         start: { x: number; y: number },
         end: { x: number; y: number },
@@ -99,18 +98,46 @@ export function renderMeasurementCanvas({
         );
     };
 
-    const drawPoint = (point: Point, index: number) => {
+    const drawPoint = (
+        point: Point,
+        index: number,
+        color = POINT_COLOR,
+        radius = POINT_RADIUS,
+        borderColor = POINT_BORDER_COLOR,
+        borderWidth = POINT_BORDER,
+        pointFontSize = POINT_FONT_SIZE,
+        pointAppearance = "full",
+        pointLabelVisible = true,
+    ) => {
+        if (pointAppearance === "hidden") {
+            return;
+        }
+
         const p = toScreen(point);
         const cx = crisp(p.x);
         const cy = crisp(p.y);
+        const scaledRadius = Math.max(2, radius * zoom);
+        const scaledBorderWidth = Math.max(1, borderWidth * zoom);
+        const scaledPointFontSize = Math.max(8, pointFontSize * zoom);
 
-        ctx.beginPath();
-        ctx.fillStyle = "hsl(0, 84%, 60%)";
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = scaledPointBorder;
-        ctx.arc(cx, cy, scaledPointRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        if (pointAppearance === "full" || pointAppearance === "center") {
+            ctx.beginPath();
+            ctx.fillStyle = color;
+            ctx.arc(cx, cy, scaledRadius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        if (pointAppearance === "full") {
+            ctx.beginPath();
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = scaledBorderWidth;
+            ctx.arc(cx, cy, scaledRadius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        if (!pointLabelVisible) {
+            return;
+        }
 
         ctx.fillStyle = "white";
         ctx.font = `bold ${scaledPointFontSize}px Inter, sans-serif`;
@@ -131,6 +158,13 @@ export function renderMeasurementCanvas({
     measurements.forEach((m) => {
         const measurementColor = m.lineColor ?? ANGLE_LABEL_COLOR;
         const measurementLineWidth = m.lineWidth ?? LINE_WIDTH;
+        const measurementPointColor = m.pointColor ?? POINT_COLOR;
+        const measurementPointSize = m.pointSize ?? POINT_RADIUS;
+        const measurementPointBorderColor = m.pointBorderColor ?? POINT_BORDER_COLOR;
+        const measurementPointBorderWidth = m.pointBorderWidth ?? POINT_BORDER;
+        const measurementPointFontSize = m.pointFontSize ?? POINT_FONT_SIZE;
+        const measurementPointAppearance = m.pointAppearance ?? "full";
+        const measurementPointLabelVisible = m.pointLabelVisible ?? true;
 
         if (isCobb(m)) {
             drawLine(m.upperLine.start, m.upperLine.end, measurementColor, measurementLineWidth);
@@ -138,10 +172,50 @@ export function renderMeasurementCanvas({
             drawLine(m.lowerLine.start, m.lowerLine.end, measurementColor, measurementLineWidth);
             drawExtendedLine(m.lowerLine.start, m.lowerLine.end, measurementColor, measurementLineWidth);
 
-            drawPoint(m.upperLine.start, 0);
-            drawPoint(m.upperLine.end, 1);
-            drawPoint(m.lowerLine.start, 2);
-            drawPoint(m.lowerLine.end, 3);
+            drawPoint(
+                m.upperLine.start,
+                0,
+                measurementPointColor,
+                measurementPointSize,
+                measurementPointBorderColor,
+                measurementPointBorderWidth,
+                measurementPointFontSize,
+                measurementPointAppearance,
+                measurementPointLabelVisible,
+            );
+            drawPoint(
+                m.upperLine.end,
+                1,
+                measurementPointColor,
+                measurementPointSize,
+                measurementPointBorderColor,
+                measurementPointBorderWidth,
+                measurementPointFontSize,
+                measurementPointAppearance,
+                measurementPointLabelVisible,
+            );
+            drawPoint(
+                m.lowerLine.start,
+                2,
+                measurementPointColor,
+                measurementPointSize,
+                measurementPointBorderColor,
+                measurementPointBorderWidth,
+                measurementPointFontSize,
+                measurementPointAppearance,
+                measurementPointLabelVisible,
+            );
+            drawPoint(
+                m.lowerLine.end,
+                3,
+                measurementPointColor,
+                measurementPointSize,
+                measurementPointBorderColor,
+                measurementPointBorderWidth,
+                measurementPointFontSize,
+                measurementPointAppearance,
+                measurementPointLabelVisible,
+            );
 
             const centerWorld = {
                 x: (m.upperLine.start.x + m.upperLine.end.x + m.lowerLine.start.x + m.lowerLine.end.x) / 4,
@@ -162,8 +236,28 @@ export function renderMeasurementCanvas({
         }
 
         drawLine(m.line.start, m.line.end, measurementColor, measurementLineWidth);
-        drawPoint(m.line.start, 0);
-        drawPoint(m.line.end, 1);
+        drawPoint(
+            m.line.start,
+            0,
+            measurementPointColor,
+            measurementPointSize,
+            measurementPointBorderColor,
+            measurementPointBorderWidth,
+            measurementPointFontSize,
+            measurementPointAppearance,
+            measurementPointLabelVisible,
+        );
+        drawPoint(
+            m.line.end,
+            1,
+            measurementPointColor,
+            measurementPointSize,
+            measurementPointBorderColor,
+            measurementPointBorderWidth,
+            measurementPointFontSize,
+            measurementPointAppearance,
+            measurementPointLabelVisible,
+        );
 
         const midWorld = {
             x: (m.line.start.x + m.line.end.x) / 2,

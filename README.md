@@ -6,7 +6,7 @@ Aplicacao fullstack para medicoes radiologicas com autenticacao JWT.
 
 - Frontend: React + TypeScript + Vite + Tailwind
 - Backend: Flask + SQLAlchemy + Pydantic + JWT
-- Banco local: SQLite
+- Banco de dados: PostgreSQL
 - Autenticacao: cadastro, login e rota protegida
 
 ## Estrutura

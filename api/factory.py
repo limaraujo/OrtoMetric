@@ -16,6 +16,7 @@ from repositories.measurement_type_repository import MeasurementTypeRepository
 from repositories.user_repository import UserRepository
 from routes.auth import auth_bp
 from routes.measurement_types import measurement_types_bp
+from routes.reports import reports_bp
 from services.measurement_type_service import MeasurementTypeService
 from services.user_service import UserService
 
@@ -29,9 +30,24 @@ def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
 
     app = Flask(__name__)
 
-    # Banco local padrao para desenvolvimento.
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
     env_mode = os.getenv("FLASK_ENV", "development")
+    override_database_url = None
+    if config_overrides is not None:
+        override_value = config_overrides.get("SQLALCHEMY_DATABASE_URI")
+        if override_value:
+            override_database_url = str(override_value)
+
+    database_url = override_database_url or os.getenv("DATABASE_URL")
+    if not database_url:
+        raise ValueError(
+            "DATABASE_URL must be set (or SQLALCHEMY_DATABASE_URI in config_overrides)"
+        )
+
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
     # Em producao, impede subir sem segredo JWT explicito.
     if env_mode == "production" and not os.getenv("JWT_SECRET_KEY"):
         raise ValueError("JWT_SECRET_KEY must be set in production environment")
@@ -95,6 +111,7 @@ def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(measurement_types_bp, url_prefix="/measurement-types")
+    app.register_blueprint(reports_bp, url_prefix="/reports")
 
     @app.route("/")
     def home():

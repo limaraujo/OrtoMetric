@@ -74,6 +74,13 @@
     margin: 0.5rem;
   }
 
+  .style-editor-panel-divider {
+    width: 1px;
+    align-self: stretch;
+    background-color: hsl(var(--border));
+    margin: 0 0.5rem;
+  }
+
   /* BASE */
   .clinical-button {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:pointer-events-none;

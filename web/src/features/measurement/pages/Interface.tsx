@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Header } from '../components/Header'
 import { Toolbar } from '../components/Toolbar'
 import { useMeasurement } from '../hooks/useMeasurement'
 import { useImageCanvas } from '../hooks/useImageCanvas'
 import { CanvasBoard } from '../components/CanvasBoard'
+import type { CanvasBoardHandle } from '../components/CanvasBoard'
 import { ResultsSidebar } from '../components/ResultsSidebar'
 import api from '../../../lib/api'
 import {
@@ -18,16 +18,23 @@ export default function InterfacePage() {
   const navigate = useNavigate()
   const [allTypes, setAllTypes] = useState<MeasurementTypeItem[]>([])
   const [selectedTypeId, setSelectedTypeId] = useState<string>('')
+  const [typesError, setTypesError] = useState('')
   const previousImageRef = useRef<string | null>(null)
+  const canvasBoardRef = useRef<CanvasBoardHandle>(null)
 
   useEffect(() => {
     const loadTypes = async () => {
-      const loaded = await loadAllMeasurementTypes()
-      setAllTypes(loaded)
-      const activeTypeId = await loadActiveMeasurementTypeId()
-      const fallback = loaded[0]?.id ?? ''
-      const resolved = loaded.some((t) => t.id === activeTypeId) ? (activeTypeId ?? fallback) : fallback
-      setSelectedTypeId(resolved)
+      try {
+        setTypesError('')
+        const loaded = await loadAllMeasurementTypes()
+        setAllTypes(loaded)
+        const activeTypeId = await loadActiveMeasurementTypeId()
+        const fallback = loaded[0]?.id ?? ''
+        const resolved = loaded.some((t) => t.id === activeTypeId) ? (activeTypeId ?? fallback) : fallback
+        setSelectedTypeId(resolved)
+      } catch {
+        setTypesError('Falha ao carregar tipos de medição do servidor.')
+      }
     }
 
     void loadTypes()
@@ -35,7 +42,16 @@ export default function InterfacePage() {
 
   useEffect(() => {
     if (!selectedTypeId) return
-    void saveActiveMeasurementTypeId(selectedTypeId)
+
+    const persistSelection = async () => {
+      try {
+        await saveActiveMeasurementTypeId(selectedTypeId)
+      } catch {
+        setTypesError('Falha ao salvar tipo ativo no servidor.')
+      }
+    }
+
+    void persistSelection()
   }, [selectedTypeId])
 
   useEffect(() => {
@@ -62,6 +78,7 @@ export default function InterfacePage() {
     moveAngleLabel,
     updateMeasurementStyle,
     updateMeasurementLabelFontSize,
+    updatePointStyle,
     removeMeasurement,
     clearAll,
     undo,
@@ -78,8 +95,11 @@ export default function InterfacePage() {
     setActiveTool('none')
   }
 
+  const requestAnnotatedImage = async () => canvasBoardRef.current?.captureAnnotatedImage() ?? null
+
   const {
     image,
+    imageName,
     transform,
     isPanning,
     loadImage,
@@ -107,12 +127,11 @@ export default function InterfacePage() {
   }, [image, clearAll])
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      <Header />
+    <div className="h-full flex flex-col bg-background">
 
-      <main className="flex-1 flex gap-4 p-4 max-w-screen-2xl mx-auto w-full min-h-0">
+      <main className="flex-1 flex gap-4 p-4 max-w-screen-2xl mx-auto w-full min-h-0 overflow-hidden">
 
-        <div className="flex-1 flex flex-col gap-4">
+        <div className="flex-1 flex flex-col gap-4 min-h-0">
 
           <Toolbar
             activeTool={state.activeTool}
@@ -138,6 +157,7 @@ export default function InterfacePage() {
           />
 
           <CanvasBoard
+            ref={canvasBoardRef}
             image={image}
             transform={transform}
             activeTool={state.activeTool}
@@ -156,6 +176,7 @@ export default function InterfacePage() {
             onEndAngleLabelDrag={endAngleLabelDrag}
             onUpdateMeasurementStyle={updateMeasurementStyle}
             onUpdateMeasurementLabelFontSize={updateMeasurementLabelFontSize}
+            onUpdatePointStyle={updatePointStyle}
             onLoadImage={loadImage}
             onStartPan={startPan}
             onUpdatePan={updatePan}
@@ -169,6 +190,9 @@ export default function InterfacePage() {
         </div>
 
         <ResultsSidebar
+          imageName={imageName}
+          imageDataUrl={image}
+          onRequestAnnotatedImage={requestAnnotatedImage}
           measurements={state.measurements}
           types={allTypes}
           distanceCalibration={null}
@@ -177,11 +201,15 @@ export default function InterfacePage() {
 
       </main>
 
-      <footer className="h-12 border-t border-border bg-card/50 flex items-center justify-center">
-        <p className="text-xs text-muted-foreground">
-          Radiology Measure © {new Date().getFullYear()} — Ferramenta de medições radiológicas
-        </p>
-      </footer>
+      {typesError && (
+        <div
+          className="fixed bottom-16 left-1/2 z-20 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-lg border border-destructive/35 bg-destructive/15 px-4 py-2 text-sm text-red-200"
+          role="alert"
+          aria-live="assertive"
+        >
+          {typesError}
+        </div>
+      )}
     </div>
   )
 }

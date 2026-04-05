@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isDistance } from "../types/measurement";
-import type { DistanceCalibration, Measurement, Point } from "../types/measurement";
+import type { DistanceCalibration, Measurement, Point, PointAppearanceMode } from "../types/measurement";
 import {
     DEFAULT_ANGLE_FONT_SIZE,
     DEFAULT_DISTANCE_FONT_SIZE,
@@ -31,6 +31,16 @@ interface MeasurementCanvasProps {
     onEndAngleLabelDrag: () => void;
     onUpdateMeasurementStyle: (measurementId: string, lineColor: string, lineWidth: number) => void;
     onUpdateMeasurementLabelFontSize: (measurementId: string, fontSize: number) => void;
+    onUpdatePointStyle: (
+        measurementId: string,
+        pointColor: string,
+        pointSize: number,
+        pointBorderColor: string,
+        pointBorderWidth: number,
+        pointFontSize: number,
+        pointAppearance: PointAppearanceMode,
+        pointLabelVisible: boolean,
+    ) => void;
 }
 
 export function MeasurementCanvas({
@@ -51,6 +61,7 @@ export function MeasurementCanvas({
     onEndAngleLabelDrag,
     onUpdateMeasurementStyle,
     onUpdateMeasurementLabelFontSize,
+    onUpdatePointStyle,
 }: MeasurementCanvasProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -63,7 +74,6 @@ export function MeasurementCanvas({
 
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const [selectedMeasurementId, setSelectedMeasurementId] = useState<string | null>(null);
-    const [stylePanelPosition, setStylePanelPosition] = useState<{ x: number; y: number } | null>(null);
 
     useEffect(() => {
         const container = containerRef.current;
@@ -102,7 +112,6 @@ export function MeasurementCanvas({
         const stillExists = measurements.some((m) => m.id === selectedMeasurementId);
         if (!stillExists) {
             setSelectedMeasurementId(null);
-            setStylePanelPosition(null);
         }
     }, [measurements, selectedMeasurementId]);
 
@@ -142,7 +151,6 @@ export function MeasurementCanvas({
             if (labelId) {
                 e.stopPropagation();
                 setSelectedMeasurementId(null);
-                setStylePanelPosition(null);
                 setDraggedLabelId(labelId);
 
                 if (e.shiftKey) {
@@ -168,16 +176,11 @@ export function MeasurementCanvas({
             const measurementId = findMeasurementLineAtPosition(measurements, x, y, zoom);
             if (measurementId) {
                 e.stopPropagation();
-                const rect = containerRef.current?.getBoundingClientRect();
-                const panelX = rect ? e.clientX - rect.left : 24;
-                const panelY = rect ? e.clientY - rect.top : 24;
                 setSelectedMeasurementId(measurementId);
-                setStylePanelPosition({ x: panelX, y: panelY });
                 return;
             }
 
             setSelectedMeasurementId(null);
-            setStylePanelPosition(null);
 
             if (activeTool === "angle" && points.length < 4) {
                 e.stopPropagation();
@@ -267,13 +270,12 @@ export function MeasurementCanvas({
                 className="w-full h-full"
             />
 
-            {selectedMeasurement && stylePanelPosition && (
+            {selectedMeasurement && (
                 <StyleEditorPanel
                     selectedMeasurement={selectedMeasurement}
-                    stylePanelPosition={stylePanelPosition}
-                    containerSize={containerSize}
                     onUpdateMeasurementStyle={onUpdateMeasurementStyle}
                     onUpdateMeasurementLabelFontSize={onUpdateMeasurementLabelFontSize}
+                    onUpdatePointStyle={onUpdatePointStyle}
                 />
             )}
 
@@ -296,6 +298,7 @@ export function MeasurementCanvas({
                     </p>
                 </div>
             )}
+
         </div>
     );
 }

@@ -1,12 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { Upload, Image as ImageIcon } from "lucide-react"
+import html2canvas from "html2canvas"
 import { ImageLoader } from "./ImageLoader"
 import type { ImageLoaderHandle } from "./ImageLoader"
 import { ImagePreview } from "../../../components/ui/ImagePreview"
 import { MeasurementCanvas } from "./MeasurementCanvas"
 import type { CanvasBoardProps } from "../types/canvas"
 
-export function CanvasBoard({
+export type CanvasBoardHandle = {
+  captureAnnotatedImage: () => Promise<string | null>
+}
+
+export const CanvasBoard = forwardRef<CanvasBoardHandle, CanvasBoardProps>(function CanvasBoard({
   image,
   transform,
   activeTool,
@@ -25,6 +30,7 @@ export function CanvasBoard({
   onEndAngleLabelDrag,
   onUpdateMeasurementStyle,
   onUpdateMeasurementLabelFontSize,
+  onUpdatePointStyle,
   onLoadImage,
   onStartPan,
   onUpdatePan,
@@ -33,12 +39,27 @@ export function CanvasBoard({
   onTouchStartZoom,
   onTouchMoveZoom,
   onTouchEndZoom,
-}: CanvasBoardProps) {
+}: CanvasBoardProps, ref) {
 
   const [isDropActive, setIsDropActive] = useState(false)
 
   const loaderRef = useRef<ImageLoaderHandle>(null)
   const interactionRef = useRef<HTMLDivElement>(null)
+
+  useImperativeHandle(ref, () => ({
+    captureAnnotatedImage: async () => {
+      if (!interactionRef.current) return null
+
+      const canvas = await html2canvas(interactionRef.current, {
+        useCORS: true,
+        logging: false,
+        scale: 2,
+        backgroundColor: null,
+      })
+
+      return canvas.toDataURL("image/png")
+    },
+  }), [])
 
   const openLoader = () => loaderRef.current?.open()
 
@@ -97,7 +118,7 @@ export function CanvasBoard({
         onClick={openLoader}
         className={`
           flex flex-col items-center justify-center
-          w-full h-full min-h-100 rounded-xl border-2 border-dashed
+          w-full h-full min-h-0 rounded-xl border-2 border-dashed
           transition-all duration-300 cursor-pointer
           ${isDropActive
             ? "border-primary bg-primary/10 scale-[1.02]"
@@ -231,6 +252,7 @@ export function CanvasBoard({
           onEndAngleLabelDrag={onEndAngleLabelDrag}
           onUpdateMeasurementStyle={onUpdateMeasurementStyle}
           onUpdateMeasurementLabelFontSize={onUpdateMeasurementLabelFontSize}
+          onUpdatePointStyle={onUpdatePointStyle}
         />
       </div>
 
@@ -245,4 +267,4 @@ export function CanvasBoard({
       <ImageLoader ref={loaderRef} onPick={onLoadImage} />
     </div>
   )
-}
+})

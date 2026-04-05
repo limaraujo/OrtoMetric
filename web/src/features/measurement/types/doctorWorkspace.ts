@@ -32,6 +32,7 @@ export type MeasurementTypeFormPanelProps = {
 export type MeasurementTypeListPanelProps = {
     types: MeasurementTypeItem[];
     isLoadingTypes: boolean;
+    isPersistingSelection: boolean;
     selectedId: string | null;
     onSelect: (id: string | null) => void;
     onOpenMeasure: (typeId: string) => void;

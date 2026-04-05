@@ -5,18 +5,29 @@ import { BASE_TYPE_LABELS } from "./constants";
 export function MeasurementTypeListPanel({
   types,
   isLoadingTypes,
+  isPersistingSelection,
   selectedId,
   onSelect,
   onOpenMeasure,
   onStartEdit,
   onDelete,
 }: MeasurementTypeListPanelProps) {
+  const handleCardSelect = (typeId: string, isSelected: boolean) => {
+    onSelect(isSelected ? null : typeId);
+  };
+
   return (
-    <div className="rounded-2xl border border-border bg-card/70 p-5 md:p-7">
+    <div className="rounded-2xl border border-border bg-card/70 p-5 md:p-7" aria-busy={isPersistingSelection}>
       <h2 className="mb-4 text-base font-semibold">
         Tipos cadastrados
         <span className="ml-2 text-sm font-normal text-muted-foreground">({types.length})</span>
       </h2>
+
+      {isPersistingSelection && (
+        <p className="mb-3 text-xs text-muted-foreground" aria-live="polite">
+          Sincronizando tipo ativo...
+        </p>
+      )}
 
       {isLoadingTypes && (
         <p className="py-6 text-center text-sm text-muted-foreground">Carregando tipos...</p>
@@ -33,7 +44,17 @@ export function MeasurementTypeListPanel({
             return (
               <div
                 key={typeItem.id}
-                onClick={() => onSelect(isSelected ? null : typeItem.id)}
+                onClick={() => handleCardSelect(typeItem.id, isSelected)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleCardSelect(typeItem.id, isSelected);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSelected}
+                aria-label={`Selecionar tipo ${typeItem.name}`}
                 className={`cursor-pointer rounded-xl border p-4 transition ${isSelected
                   ? "border-primary/50 bg-primary/10"
                   : "border-border bg-secondary/20 hover:border-primary/30 hover:bg-secondary/40"

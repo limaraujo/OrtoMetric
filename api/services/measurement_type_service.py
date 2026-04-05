@@ -15,27 +15,22 @@ logger = logging.getLogger(__name__)
 DEFAULT_MEASUREMENT_TYPES: list[dict[str, Any]] = [
     # Catalogo base embutido para bootstrap da aplicacao.
     {
-        "id": "default-cobb-angle",
-        "name": "Ângulo de Cobb",
+        "id": "default-angle",
+        "name": "Ângulo",
         "baseType": "angulo",
         "cid": "",
         "unit": "graus",
-        "desc": "Medição padrão para escoliose vertebral.",
+        "desc": "",
         "createdAt": "predefinido",
-        "severities": [
-            {"id": "s1", "label": "Normal", "min": 0, "max": 10, "color": "#1D9E75"},
-            {"id": "s2", "label": "Leve", "min": 10, "max": 25, "color": "#BA7517"},
-            {"id": "s3", "label": "Moderado", "min": 25, "max": 40, "color": "#D85A30"},
-            {"id": "s4", "label": "Grave", "min": 40, "max": 999, "color": "#E24B4A"},
-        ],
+        "severities": [],
     },
     {
-        "id": "default-interpedicular-distance",
-        "name": "Distância interpedicular",
+        "id": "default-distance",
+        "name": "Distância",
         "baseType": "distancia",
         "cid": "",
         "unit": "mm",
-        "desc": "Distância entre os pedículos vertebrais.",
+        "desc": "Distância entre pontos",
         "createdAt": "predefinido",
         "severities": [],
     },
@@ -138,7 +133,7 @@ class MeasurementTypeService:
         try:
             data = MeasurementTypeSyncPayload(**payload)
         except ValidationError as err:
-            return None, err.errors()
+            return None, err.errors(include_context=False)
 
         parsed_types = [item.model_dump() for item in data.types]
         # Estrategia "replace-all": limpa estado anterior e persiste nova fotografia.

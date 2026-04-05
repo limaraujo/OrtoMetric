@@ -1,5 +1,4 @@
 import { ActivitySquare, ListPlus, LogOut } from "lucide-react";
-import { Header } from "../components/Header";
 import { MeasurementTypeFormPanel } from "../components/doctor-workspace/MeasurementTypeFormPanel";
 import { MeasurementTypeListPanel } from "../components/doctor-workspace/MeasurementTypeListPanel";
 import { useDoctorWorkspace } from "../hooks/useDoctorWorkspace";
@@ -11,13 +10,14 @@ export default function DoctorWorkspace() {
     formRef,
     types,
     isLoadingTypes,
+    isPersistingSelection,
     selectedId,
     editingId,
     form,
     formError,
     formSuccess,
     setForm,
-    setSelectedId,
+    handleSelectType,
     resetForm,
     startEdit,
     handleSeverityChange,
@@ -34,8 +34,6 @@ export default function DoctorWorkspace() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Header />
-
       <main className="mx-auto w-full max-w-screen-2xl p-4 md:p-6">
         {/* Top bar */}
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -93,8 +91,11 @@ export default function DoctorWorkspace() {
           <MeasurementTypeListPanel
             types={types}
             isLoadingTypes={isLoadingTypes}
+            isPersistingSelection={isPersistingSelection}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={(id) => {
+              void handleSelectType(id);
+            }}
             onOpenMeasure={goToMeasure}
             onStartEdit={startEdit}
             onDelete={(id) => {

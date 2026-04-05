@@ -12,19 +12,19 @@
 
 ## Riscos atuais
 
-- SQLite continua sendo um ponto fraco para producao.
 - O limiter usa memoria local.
 - O servidor de desenvolvimento nao deve ser usado no deploy.
 - O CORS precisa ser fechado para dominios reais.
+- Ainda nao ha revogacao persistida de refresh token.
 
 ## Boas praticas recomendadas
 
 1. Usar HTTPS obrigatorio.
 2. Definir `JWT_SECRET_KEY` forte.
 3. Limitar `FRONTEND_ORIGINS` aos dominios oficiais.
-4. Trocar SQLite por PostgreSQL.
-5. Usar Redis para rate limit.
-6. Fazer logs estruturados e monitoramento.
+4. Usar Redis para rate limit.
+5. Fazer logs estruturados e monitoramento.
+6. Auditar dependencias com `pip-audit` e `npm audit` no CI.
 
 ## Checklist de release
 

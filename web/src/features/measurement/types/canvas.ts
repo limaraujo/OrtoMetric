@@ -1,5 +1,5 @@
 import type { Transform } from "./transform"
-import type { Point, Measurement, DistanceCalibration } from "./measurement"
+import type { Point, Measurement, DistanceCalibration, PointAppearanceMode } from "./measurement"
 
 export type CanvasBoardProps = {
   image: string | null
@@ -22,6 +22,16 @@ export type CanvasBoardProps = {
   onEndAngleLabelDrag: () => void
   onUpdateMeasurementStyle: (measurementId: string, lineColor: string, lineWidth: number) => void
   onUpdateMeasurementLabelFontSize: (measurementId: string, fontSize: number) => void
+  onUpdatePointStyle: (
+    measurementId: string,
+    pointColor: string,
+    pointSize: number,
+    pointBorderColor: string,
+    pointBorderWidth: number,
+    pointFontSize: number,
+    pointAppearance: PointAppearanceMode,
+    pointLabelVisible: boolean,
+  ) => void
 
   onLoadImage: (file: File) => void
 

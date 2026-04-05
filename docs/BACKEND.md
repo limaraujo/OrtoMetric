@@ -44,6 +44,7 @@
 - JWT em cookie com CSRF
 - CORS configuravel por `FRONTEND_ORIGINS`
 - Secret obrigatoria em producao
+- `DATABASE_URL` define o banco usado pela aplicacao
 - Rate limit no login
 
 ## Testes
@@ -59,6 +60,7 @@ Os testes cobrem:
 
 ## Pontos de atencao
 
-- SQLite e valido para desenvolvimento, mas nao e ideal para producao.
+- PostgreSQL e o caminho padrao para producao e para ambientes documentados.
+- Em testes, a suite sobrescreve o banco com SQLite em memoria para isolamento.
 - O limiter em memoria precisa ser trocado por Redis para escala real.
 - Em producao, use um servidor WSGI como Gunicorn.

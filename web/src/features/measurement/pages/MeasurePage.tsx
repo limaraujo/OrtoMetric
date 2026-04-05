@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Header } from '../components/Header'
 import { Toolbar } from '../components/Toolbar'
 import { useMeasurement } from '../hooks/useMeasurement'
 import { useImageCanvas } from '../hooks/useImageCanvas'
 import { CanvasBoard } from '../components/CanvasBoard'
+import type { CanvasBoardHandle } from '../components/CanvasBoard'
 import { ResultsSidebar } from '../components/ResultsSidebar'
 import api from '../../../lib/api'
 import {
@@ -16,18 +16,42 @@ import {
 import type { DistanceCalibration } from '../types/measurement'
 import { isDistance } from '../types/measurement'
 
+const DISTANCE_CALIBRATION_STORAGE_KEY = 'ortometric_distance_calibration'
+
+const readDistanceCalibration = (): DistanceCalibration | null => {
+  if (typeof window === 'undefined') return null
+
+  const rawCalibration = window.sessionStorage.getItem(DISTANCE_CALIBRATION_STORAGE_KEY)
+  if (!rawCalibration) return null
+
+  try {
+    const parsed = JSON.parse(rawCalibration) as Partial<DistanceCalibration>
+    const pixelsPerUnit = Number(parsed.pixelsPerUnit)
+    const unit = typeof parsed.unit === 'string' ? parsed.unit.trim() : ''
+
+    if (!Number.isFinite(pixelsPerUnit) || pixelsPerUnit <= 0 || !unit) {
+      return null
+    }
+
+    return { pixelsPerUnit, unit }
+  } catch {
+    return null
+  }
+}
+
 export default function MeasurePage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [allTypes, setAllTypes] = useState<MeasurementTypeItem[]>([])
   const [selectedTypeId, setSelectedTypeId] = useState<string>('')
   const [typesError, setTypesError] = useState('')
-  const [distanceCalibration, setDistanceCalibration] = useState<DistanceCalibration | null>(null)
+  const [distanceCalibration, setDistanceCalibration] = useState<DistanceCalibration | null>(() => readDistanceCalibration())
   const [isCalibrationPanelOpen, setIsCalibrationPanelOpen] = useState(false)
   const [calibrationReferenceId, setCalibrationReferenceId] = useState('')
   const [calibrationRealDistance, setCalibrationRealDistance] = useState('')
   const [calibrationUnit, setCalibrationUnit] = useState('mm')
   const previousImageRef = useRef<string | null>(null)
+  const canvasBoardRef = useRef<CanvasBoardHandle>(null)
 
   useEffect(() => {
     const loadTypes = async () => {
@@ -61,7 +85,16 @@ export default function MeasurePage() {
 
   useEffect(() => {
     if (!selectedTypeId) return
-    void saveActiveMeasurementTypeId(selectedTypeId)
+
+    const persistSelection = async () => {
+      try {
+        await saveActiveMeasurementTypeId(selectedTypeId)
+      } catch {
+        setTypesError('Falha ao salvar tipo ativo no servidor.')
+      }
+    }
+
+    void persistSelection()
   }, [selectedTypeId])
 
   useEffect(() => {
@@ -88,6 +121,7 @@ export default function MeasurePage() {
     moveAngleLabel,
     updateMeasurementStyle,
     updateMeasurementLabelFontSize,
+    updatePointStyle,
     removeMeasurement,
     clearAll,
     undo,
@@ -138,6 +172,20 @@ export default function MeasurePage() {
     setCalibrationUnit(preferredDistanceUnit || 'mm')
   }, [distanceCalibration?.unit, preferredDistanceUnit])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    if (distanceCalibration) {
+      window.sessionStorage.setItem(
+        DISTANCE_CALIBRATION_STORAGE_KEY,
+        JSON.stringify(distanceCalibration),
+      )
+      return
+    }
+
+    window.sessionStorage.removeItem(DISTANCE_CALIBRATION_STORAGE_KEY)
+  }, [distanceCalibration])
+
   const handleApplyCalibration = () => {
     const parsedRealDistance = Number(calibrationRealDistance)
     if (!calibrationReferenceId || !Number.isFinite(parsedRealDistance) || parsedRealDistance <= 0) {
@@ -159,9 +207,7 @@ export default function MeasurePage() {
     setIsCalibrationPanelOpen((current) => !current)
   }
 
-  const handleClearCalibrationPanel = () => {
-    setDistanceCalibration(null)
-    setCalibrationRealDistance('')
+  const handleCloseCalibrationPanel = () => {
     setIsCalibrationPanelOpen(false)
   }
 
@@ -172,8 +218,11 @@ export default function MeasurePage() {
     setIsCalibrationPanelOpen(false)
   }
 
+  const requestAnnotatedImage = async () => canvasBoardRef.current?.captureAnnotatedImage() ?? null
+
   const {
     image,
+    imageName,
     transform,
     isPanning,
     loadImage,
@@ -202,12 +251,11 @@ export default function MeasurePage() {
   }, [image, clearAll])
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      <Header />
+    <div className="h-full flex flex-col bg-background">
 
-      <main className="flex-1 flex gap-4 p-4 max-w-screen-2xl mx-auto w-full min-h-0">
+      <main className="flex-1 flex gap-4 p-4 max-w-screen-2xl mx-auto w-full min-h-0 overflow-hidden">
 
-        <div className="flex-1 flex flex-col gap-4">
+        <div className="flex-1 flex flex-col gap-4 min-h-0">
 
           <Toolbar
             activeTool={state.activeTool}
@@ -243,7 +291,7 @@ export default function MeasurePage() {
                 </div>
                 <button
                   type="button"
-                  onClick={handleClearCalibrationPanel}
+                  onClick={handleCloseCalibrationPanel}
                   className="clinical-button clinical-button-ghost px-3 py-1 text-xs"
                 >
                   Fechar
@@ -324,6 +372,7 @@ export default function MeasurePage() {
           )}
 
           <CanvasBoard
+            ref={canvasBoardRef}
             image={image}
             transform={transform}
             activeTool={state.activeTool}
@@ -342,6 +391,7 @@ export default function MeasurePage() {
             onEndAngleLabelDrag={endAngleLabelDrag}
             onUpdateMeasurementStyle={updateMeasurementStyle}
             onUpdateMeasurementLabelFontSize={updateMeasurementLabelFontSize}
+            onUpdatePointStyle={updatePointStyle}
             onLoadImage={loadImage}
             onStartPan={startPan}
             onUpdatePan={updatePan}
@@ -355,25 +405,26 @@ export default function MeasurePage() {
         </div>
 
         <ResultsSidebar
+          imageName={imageName}
+          imageDataUrl={image}
+          onRequestAnnotatedImage={requestAnnotatedImage}
           measurements={state.measurements}
           types={allTypes}
           distanceCalibration={distanceCalibration}
           onDeleteMeasurement={removeMeasurement}
         />
 
-        {typesError && (
-          <div className="fixed bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-lg border border-destructive/35 bg-destructive/15 px-4 py-2 text-sm text-red-200">
-            {typesError}
-          </div>
-        )}
-
       </main>
 
-      <footer className="h-12 border-t border-border bg-card/50 flex items-center justify-center">
-        <p className="text-xs text-muted-foreground">
-          Radiology Measure © {new Date().getFullYear()} — Ferramenta de medições radiológicas
-        </p>
-      </footer>
+      {typesError && (
+        <div
+          className="fixed bottom-16 left-1/2 z-20 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-lg border border-destructive/35 bg-destructive/15 px-4 py-2 text-sm text-red-200"
+          role="alert"
+          aria-live="assertive"
+        >
+          {typesError}
+        </div>
+      )}
     </div>
   )
 }

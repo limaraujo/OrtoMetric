@@ -1,6 +1,10 @@
 export const LINE_WIDTH = 3;
 export const POINT_RADIUS = 8;
 export const POINT_BORDER = 2;
+export const POINT_BORDER_COLOR = "#ffffff";
+export const POINT_COLOR = "hsl(0, 84%, 60%)";
+export const POINT_FONT_SIZE = 12;
+
 
 export const DEFAULT_ANGLE_FONT_SIZE = 14;
 export const DEFAULT_DISTANCE_FONT_SIZE = 12;

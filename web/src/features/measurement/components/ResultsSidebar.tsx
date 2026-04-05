@@ -1,29 +1,110 @@
-import { Clock, Ruler, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { FileDown, Ruler, Settings2 } from 'lucide-react';
 import type { DistanceCalibration, Measurement } from '../types/measurement';
-import { isCobb, isDistance } from '../types/measurement';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import type { MeasurementTypeItem, SeverityInterval } from '../../../lib/measurementTypes';
+import type { MeasurementTypeItem } from '../../../lib/measurementTypes';
+import {
+  createDefaultPdfFieldSelection,
+  exportPdfReport,
+  exportTxtReport,
+  syncPdfFieldSelections,
+  type DoctorIdentification,
+  type Exam,
+  type MeasurementPdfFieldSelection,
+  type PatientIdentification,
+} from '../lib/reportApi';
+import {
+  MeasurementResultsList,
+} from './results/MeasurementResultsList';
+import { PdfConfigPanel } from './results/PdfConfigPanel';
 
 type ResultsSidebarProps = {
+  imageName: string | null;
+  imageDataUrl: string | null;
+  onRequestAnnotatedImage: () => Promise<string | null>;
   measurements: Measurement[];
   types: MeasurementTypeItem[];
   distanceCalibration: DistanceCalibration | null;
   onDeleteMeasurement: (measurementId: string) => void;
 };
 
-function findSeverity(angle: number, severities: SeverityInterval[]): SeverityInterval | null {
-  const matched = severities.find((s) => angle >= s.min && angle <= s.max);
-  return matched ?? null;
-}
-
 export function ResultsSidebar({
+  imageName,
+  imageDataUrl,
+  onRequestAnnotatedImage,
   measurements,
   types,
   distanceCalibration,
   onDeleteMeasurement,
 }: ResultsSidebarProps) {
   const typesById = new Map(types.map((t) => [t.id, t]));
+  const [isPdfConfigOpen, setIsPdfConfigOpen] = useState(false);
+  const [pdfTitle, setPdfTitle] = useState('Relatorio de Medicoes');
+  const [pdfAuthor, setPdfAuthor] = useState('');
+  const [patient, setPatient] = useState<PatientIdentification>({
+    fullName: '',
+    birthDate: '',
+  });
+  const [exam, setExam] = useState<Exam>({});
+  const [doctor, setDoctor] = useState<DoctorIdentification>({});
+  const [includeImage, setIncludeImage] = useState(true);
+  const [includeSummary, setIncludeSummary] = useState(true);
+  const [includeScale, setIncludeScale] = useState(true);
+  const [conclusions, setConclusions] = useState('');
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [fieldsByMeasurementId, setFieldsByMeasurementId] =
+    useState<Record<string, MeasurementPdfFieldSelection>>({});
+
+  useEffect(() => {
+    setFieldsByMeasurementId((current) => syncPdfFieldSelections(measurements, current));
+  }, [measurements]);
+
+  const selectedForPdfCount = useMemo(
+    () => measurements.filter((measurement) => (fieldsByMeasurementId[measurement.id]?.include ?? true)).length,
+    [fieldsByMeasurementId, measurements],
+  );
+
+  const updateMeasurementPdfSelection = (
+    measurementId: string,
+    patch: Partial<MeasurementPdfFieldSelection>,
+  ) => {
+    setFieldsByMeasurementId((current) => ({
+      ...current,
+      [measurementId]: {
+        ...(current[measurementId] ?? createDefaultPdfFieldSelection()),
+        ...patch,
+      },
+    }));
+  };
+
+  const handleExportPdf = async () => {
+    setIsExportingPdf(true);
+
+    try {
+      const annotatedImageDataUrl = includeImage ? await onRequestAnnotatedImage() : null;
+
+      await exportPdfReport({
+        imageName,
+        imageDataUrl: annotatedImageDataUrl ?? imageDataUrl,
+        measurements,
+        types,
+        distanceCalibration,
+        options: {
+          title: pdfTitle,
+          author: pdfAuthor,
+          patient,
+          exam,
+          doctor,
+          conclusions,
+          includeImage,
+          includeSummary,
+          includeScale,
+          fieldsByMeasurementId,
+        },
+      });
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
 
   return (
     <div className="w-72 shrink-0 flex flex-col min-h-0">
@@ -33,107 +114,71 @@ export function ResultsSidebar({
           <h2 className="text-lg font-semibold text-foreground">Resultados</h2>
         </div>
 
-        <div className='flex-1 space-y-3 overflow-y-auto pr-1 min-h-0'>
-          {measurements.map((m, index) => {
-            const measurementType = typesById.get(m.measurementTypeId) ?? null;
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              void exportTxtReport({
+                imageName,
+                measurements,
+                types,
+                distanceCalibration,
+              });
+            }}
+            className="clinical-button clinical-button-ghost w-full justify-center px-2"
+          >
+            <FileDown className="h-4 w-4" />
+            TXT
+          </button>
 
-            if (isCobb(m)) {
-              // Render Cobb/angle measurement
-              const severity = measurementType ? findSeverity(m.angle, measurementType.severities) : null;
-
-              return (
-                <div
-                  key={m.id}
-                  className="rounded-lg border border-border bg-secondary/40 p-3 transition hover:border-primary/35"
-                >
-                  <span className='text-sm font-medium'>
-                    {measurementType?.name ?? 'Ângulo de Cobb'} #{index + 1}:
-                  </span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-primary">
-                      {m.angle.toFixed(1)}
-                    </span>
-                    <span className="text-lg text-muted-foreground">
-                      {measurementType?.unitMeasure || '°'}
-                    </span>
-                  </div>
-
-                  <div className="mt-2 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => onDeleteMeasurement(m.id)}
-                      className="clinical-button clinical-button-ghost px-2 py-1 text-muted-foreground hover:text-destructive"
-                      title="Excluir medição"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {severity && (
-                    <div className="mt-2">
-                      <span
-                        className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium text-white"
-                        style={{ backgroundColor: severity.color }}
-                      >
-                        {severity.label}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3" />
-                    <span>
-                      {format(m.timestamp, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    </span>
-                  </div>
-                </div>
-              );
-            } else if (isDistance(m)) {
-              // Render distance measurement
-              const displayDistance = distanceCalibration
-                ? m.distance / distanceCalibration.pixelsPerUnit
-                : m.distance;
-              const displayUnit = distanceCalibration?.unit ?? 'px';
-
-              return (
-                <div
-                  key={m.id}
-                  className="rounded-lg border border-border bg-secondary/40 p-3 transition hover:border-primary/35"
-                >
-                  <span className='text-sm font-medium'>
-                    {measurementType?.name ?? 'Distância'} #{index + 1}:
-                  </span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-primary">
-                      {displayDistance.toFixed(1)}
-                    </span>
-                    <span className="text-lg text-muted-foreground">
-                      {displayUnit}
-                    </span>
-                  </div>
-
-                  <div className="mt-2 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => onDeleteMeasurement(m.id)}
-                      className="clinical-button clinical-button-ghost px-2 py-1 text-muted-foreground hover:text-destructive"
-                      title="Excluir medição"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3" />
-                    <span>
-                      {format(m.timestamp, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    </span>
-                  </div>
-                </div>
-              );
-            }
-          })}
+          <button
+            type="button"
+            onClick={() => setIsPdfConfigOpen((current) => !current)}
+            className="clinical-button clinical-button-ghost w-full justify-center px-2"
+          >
+            <Settings2 className="h-4 w-4" />
+            PDF
+          </button>
         </div>
+
+        {isPdfConfigOpen && (
+          <PdfConfigPanel
+            pdfTitle={pdfTitle}
+            onPdfTitleChange={setPdfTitle}
+            pdfAuthor={pdfAuthor}
+            onPdfAuthorChange={setPdfAuthor}
+            patient={patient}
+            onPatientChange={setPatient}
+            exam={exam}
+            onExamChange={setExam}
+            doctor={doctor}
+            onDoctorChange={setDoctor}
+            conclusions={conclusions}
+            onConclusionsChange={setConclusions}
+            includeImage={includeImage}
+            onIncludeImageChange={setIncludeImage}
+            includeSummary={includeSummary}
+            onIncludeSummaryChange={setIncludeSummary}
+            includeScale={includeScale}
+            onIncludeScaleChange={setIncludeScale}
+            measurements={measurements}
+            typesById={typesById}
+            fieldsByMeasurementId={fieldsByMeasurementId}
+            onUpdateMeasurementPdfSelection={updateMeasurementPdfSelection}
+            selectedForPdfCount={selectedForPdfCount}
+            isExportingPdf={isExportingPdf}
+            onExportPdf={() => {
+              void handleExportPdf();
+            }}
+          />
+        )}
+
+        <MeasurementResultsList
+          measurements={measurements}
+          typesById={typesById}
+          distanceCalibration={distanceCalibration}
+          onDeleteMeasurement={onDeleteMeasurement}
+        />
 
         {measurements.length === 0 && (
           <p className="text-sm text-muted-foreground">Nenhuma medição registrada.</p>

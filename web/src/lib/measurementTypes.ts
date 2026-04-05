@@ -119,6 +119,6 @@ export async function loadActiveMeasurementTypeId(): Promise<string | null> {
     return typeof data?.activeTypeId === "string" ? data.activeTypeId : null;
 }
 
-export async function saveActiveMeasurementTypeId(typeId: string): Promise<void> {
+export async function saveActiveMeasurementTypeId(typeId: string | null): Promise<void> {
     await api.put("/measurement-types/active", { activeTypeId: typeId });
 }

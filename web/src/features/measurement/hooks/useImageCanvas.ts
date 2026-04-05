@@ -6,6 +6,7 @@ export function useImageCanvas(isDragging: boolean) {
   const ZOOM_STEP = 0.2;
 
   const [image, setImage] = useState<string | null>(null);
+  const [imageName, setImageName] = useState<string | null>(null);
 
   const [transform, setTransform] = useState({
     zoom: 1,
@@ -72,6 +73,7 @@ export function useImageCanvas(isDragging: boolean) {
   */
 
   const loadImage = (file: File) => {
+    setImageName(file.name);
     const reader = new FileReader();
     reader.onload = (e) => setImage(e.target?.result as string);
     reader.readAsDataURL(file);
@@ -258,6 +260,7 @@ export function useImageCanvas(isDragging: boolean) {
 
   return {
     image,
+    imageName,
     transform,
     isPanning,
 

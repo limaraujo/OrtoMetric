@@ -1,5 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
-
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 class SeverityIntervalSchema(BaseModel):
     # Faixa de severidade exibida na UI para interpretar o valor medido.
@@ -8,6 +7,13 @@ class SeverityIntervalSchema(BaseModel):
     min: float
     max: float
     color: str = Field(..., min_length=3, max_length=20)
+    
+    @model_validator(mode="after")
+    def validate_interval(self):
+        if self.min >= self.max:
+            raise ValueError("min must be less than max")
+        return self
+
 
 
 class MeasurementTypeSchema(BaseModel):
@@ -25,7 +31,7 @@ class MeasurementTypeSchema(BaseModel):
     @classmethod
     def validate_base_type(cls, value: str) -> str:
         # Restringe dominio para tipos suportados pelo motor de medicao.
-        allowed = {"angulo", "distancia", "proporcao"}
+        allowed = {"angulo", "distancia"}
         if value not in allowed:
             raise ValueError("baseType inválido")
         return value
@@ -36,6 +42,46 @@ class MeasurementTypeSchema(BaseModel):
         # Normaliza para comparacao/armazenamento consistente.
         return value.strip().upper()
 
+    @model_validator(mode="after")
+    def validate_severities(self):
+        # Evita IDs duplicados e faixas sobrepostas dentro do mesmo tipo.
+        seen_ids: set[str] = set()
+        ordered = sorted(self.severities, key=lambda sev: sev.min)
+
+        for severity in ordered:
+            norm_id = severity.id.strip().lower()
+            if norm_id in seen_ids:
+                raise ValueError(f"severity id '{severity.id}' aparece mais de uma vez")
+            seen_ids.add(norm_id)
+
+        for previous, current in zip(ordered, ordered[1:]):
+            if previous.max > current.min:
+                raise ValueError(
+                    "severity intervals cannot overlap"
+                )
+
+        return self
+
 
 class MeasurementTypeSyncPayload(BaseModel):
-    types: list[MeasurementTypeSchema] = []
+    types: list[MeasurementTypeSchema] = Field(default_factory=list) #type: ignore
+    
+    @model_validator(mode="after")
+    def model_valid(self):
+        seen_ids: set[str] = set()
+        seen_names: set[str] = set()
+
+        for t in self.types:
+            norm_id = t.id.lower()
+            norm_name = t.name.lower()
+
+            if norm_id in seen_ids:
+                raise ValueError(f"ID '{t.id}' de MeasurementType aparece mais de uma vez")
+            seen_ids.add(norm_id)
+
+            if norm_name in seen_names:
+                raise ValueError(f"name '{t.name}' de MeasurementType aparece mais de uma vez")
+            seen_names.add(norm_name)
+
+        return self
+
