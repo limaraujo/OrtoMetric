@@ -35,9 +35,9 @@ def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
     is_testing = bool(config_overrides and config_overrides.get("TESTING"))
 
     # 🔴 DEBUG CRÍTICO (Render logs)
-    print("[BOOT] create_app started")
-    print("[BOOT] FLASK_ENV:", env_mode)
-    print("[BOOT] DATABASE_URL exists:", bool(os.getenv("DATABASE_URL")))
+    print("[BOOT] create_app")
+    print("[BOOT] DATABASE_URL =", os.getenv("DATABASE_URL"))
+    print("[BOOT] JWT =", bool(os.getenv("JWT_SECRET_KEY")))
 
     database_url = resolve_database_url(config_overrides)
 
