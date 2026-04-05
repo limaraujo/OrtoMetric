@@ -3,16 +3,38 @@ services:
     name: ortometric-api
     env: python
     rootDir: api
-    buildCommand: pip install -r requirements.txt && flask --app wsgi db upgrade
-    startCommand: gunicorn wsgi:app
+
+    buildCommand: pip install -r requirements.txt
+
+    startCommand: flask --app wsgi db upgrade && gunicorn wsgi:app --bind 0.0.0.0:$PORT
+
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+
       - key: FLASK_ENV
         value: production
+
       - key: FLASK_DEBUG
         value: "False"
+
       - key: DATABASE_URL
         sync: false
+
       - key: SECRET_KEY
         sync: false
+
+      - key: JWT_SECRET_KEY
+        sync: false
+
       - key: FRONTEND_ORIGINS
-        value: https://your-frontend.vercel.app
+        value: https://ortometric-web.vercel.app
+
+      - key: FRONTEND_ORIGIN_REGEX
+        value: https://.*\\.vercel\\.app
+
+      - key: JWT_COOKIE_SAMESITE
+        value: None
+
+      - key: JWT_COOKIE_SECURE
+        value: "true"
