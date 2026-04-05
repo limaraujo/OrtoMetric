@@ -28,7 +28,7 @@ services:
         sync: false
 
       - key: FRONTEND_ORIGINS
-        value: https://ortometric-web.vercel.app
+        value: https://orto-metric-web-inx8.vercel.app
 
       - key: FRONTEND_ORIGIN_REGEX
         value: https://.*\\.vercel\\.app
