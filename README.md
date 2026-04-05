@@ -90,7 +90,7 @@ pytest -q
 
 - Frontend (Vercel): `web/`
 - Backend (Render): `api/` com `gunicorn wsgi:app`
-- Banco: Supabase PostgreSQL (`DATABASE_URL` com `sslmode=require`)
+- Banco: Supabase PostgreSQL (`DATABASE_URL_IPV4` com `sslmode=require`)
 
 Guia completo em [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 

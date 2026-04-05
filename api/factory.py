@@ -62,7 +62,7 @@ def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
 
     # 🔴 DEBUG CRÍTICO (Render logs)
     print("[BOOT] create_app")
-    print("[BOOT] DATABASE_URL =", os.getenv("DATABASE_URL"))
+    print("[BOOT] DATABASE_URL_IPV4 =", os.getenv("DATABASE_URL_IPV4"))
     print("[BOOT] JWT =", bool(os.getenv("JWT_SECRET_KEY")))
 
     database_url = resolve_database_url(config_overrides)

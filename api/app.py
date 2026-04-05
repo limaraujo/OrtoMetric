@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 from factory import create_app
 
-# Carrega variaveis locais para permitir DATABASE_URL em .env durante o start.
+# Carrega variaveis locais para permitir DATABASE_URL_IPV4 em .env durante o start.
 load_dotenv()
 
 # Instancia o app Flask usando o app factory para centralizar configuracao.

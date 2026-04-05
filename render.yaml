@@ -18,7 +18,7 @@ services:
       - key: FLASK_DEBUG
         value: "False"
 
-      - key: DATABASE_URL
+      - key: DATABASE_URL_IPV4
         sync: false
 
       - key: SECRET_KEY
