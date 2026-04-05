@@ -53,7 +53,10 @@ def _validation_error_response(err: ValidationError):
     # Padroniza resposta de erro de validacao do Pydantic.
     # Mantem formato consistente para o frontend mapear campos invalidos.
     logger.info("payload_validation_failed")
-    return jsonify({"error": err.errors()}), 400
+    # Alguns validadores incluem objetos Python em `ctx` (ex.: ValueError),
+    # que nao sao serializaveis em JSON e causariam 500 ao montar a resposta.
+    safe_errors = err.errors(include_context=False)
+    return jsonify({"error": safe_errors}), 400
 
 
 @auth_bp.errorhandler(RateLimitExceeded)

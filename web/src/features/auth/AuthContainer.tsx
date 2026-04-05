@@ -5,6 +5,19 @@ import api, { setAccessToken, setCsrfAccessToken, setCsrfRefreshToken } from "..
 import { AuthForm } from "./AuthForm";
 import type { AuthFormData, AuthMode, LoginResponse } from "./types";
 
+type AuthField = keyof AuthFormData;
+
+type ApiValidationErrorItem = {
+  loc?: unknown;
+  msg?: unknown;
+};
+
+type ApiErrorPayload = {
+  error?: unknown;
+};
+
+const AUTH_FIELDS: ReadonlySet<AuthField> = new Set(["username", "email", "password"]);
+
 export default function AuthContainer() {
   const [mode, setMode] = useState<AuthMode>("login");
 
@@ -25,6 +38,12 @@ export default function AuthContainer() {
     setFieldErrors(prev => ({ ...prev, [field]: "" }));
   };
 
+  const handleSwitchMode = (nextMode: AuthMode) => {
+    setMode(nextMode);
+    setError("");
+    setFieldErrors({});
+  };
+
   const validateForm = () => {
     const nextErrors: Partial<Record<keyof AuthFormData, string>> = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,6 +60,18 @@ export default function AuthContainer() {
       nextErrors.password = "Senha deve ter ao menos 8 caracteres.";
     }
 
+    if (mode === "register") {
+      if (!/[A-Z]/.test(form.password)) {
+        nextErrors.password = "Senha deve conter pelo menos uma letra maiuscula.";
+      } else if (!/[a-z]/.test(form.password)) {
+        nextErrors.password = "Senha deve conter pelo menos uma letra minuscula.";
+      } else if (!/[0-9]/.test(form.password)) {
+        nextErrors.password = "Senha deve conter pelo menos um numero.";
+      } else if (!/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(form.password)) {
+        nextErrors.password = "Senha deve conter pelo menos um caractere especial.";
+      }
+    }
+
     setFieldErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -55,7 +86,7 @@ export default function AuthContainer() {
     }
 
     const status = err.response.status;
-    const data = err.response.data as { error?: unknown } | undefined;
+    const data = err.response.data as ApiErrorPayload | undefined;
 
     if (status === 401) {
       return "Email ou senha invalidos.";
@@ -63,7 +94,7 @@ export default function AuthContainer() {
 
     if (status === 400) {
       if (Array.isArray(data?.error)) {
-        return "Dados invalidos. Revise os campos informados.";
+        return "Dados invalidos. Revise os campos destacados.";
       }
       if (typeof data?.error === "string") {
         return data.error;
@@ -80,8 +111,37 @@ export default function AuthContainer() {
     return "Erro na autenticacao. Tente novamente.";
   };
 
+  const parseApiFieldErrors = (err: unknown): Partial<Record<AuthField, string>> => {
+    const nextErrors: Partial<Record<AuthField, string>> = {};
+
+    if (!isAxiosError(err) || !err.response || err.response.status !== 400) {
+      return nextErrors;
+    }
+
+    const data = err.response.data as ApiErrorPayload | undefined;
+    if (!Array.isArray(data?.error)) {
+      return nextErrors;
+    }
+
+    for (const issue of data.error as ApiValidationErrorItem[]) {
+      const loc = Array.isArray(issue?.loc) ? issue.loc : [];
+      const rawField = loc[loc.length - 1];
+      if (typeof rawField !== "string" || !AUTH_FIELDS.has(rawField as AuthField)) {
+        continue;
+      }
+
+      const field = rawField as AuthField;
+      if (typeof issue?.msg === "string" && issue.msg.trim().length > 0) {
+        nextErrors[field] = issue.msg;
+      }
+    }
+
+    return nextErrors;
+  };
+
   const handleSubmit = async () => {
     setError("");
+    setFieldErrors({});
     if (!validateForm()) {
       return;
     }
@@ -109,6 +169,11 @@ export default function AuthContainer() {
 
       navigate("/dashboard");
     } catch (err) {
+      const apiFieldErrors = parseApiFieldErrors(err);
+      if (Object.keys(apiFieldErrors).length > 0) {
+        setFieldErrors(apiFieldErrors);
+      }
+
       setError(parseApiError(err, mode === "register"));
     } finally {
       setIsSubmitting(false);
@@ -128,7 +193,7 @@ export default function AuthContainer() {
           isSubmitting={isSubmitting}
           onChange={handleChange}
           onSubmit={handleSubmit}
-          onSwitchMode={setMode}
+          onSwitchMode={handleSwitchMode}
         />
       </main>
     </div>

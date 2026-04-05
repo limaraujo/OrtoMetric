@@ -53,6 +53,24 @@ def test_register(client):
     assert res.status_code == 201
 
 
+def test_register_with_weak_password_returns_400(client):
+    # Objetivo: validar retorno 400 para senha fora da politica de complexidade.
+    suffix = uuid4().hex[:8]
+    username = f"test-{suffix}"
+    email = f"{username}@test.com"
+
+    res = client.post(
+        "/auth/register",
+        json={
+            "username": username,
+            "email": email,
+            "password": "testeteste",
+        },
+    )
+
+    assert res.status_code == 400
+
+
 def test_login(client):
     # Objetivo: garantir login valido e emissao de cookies JWT.
     res = create_user_and_login(client)
