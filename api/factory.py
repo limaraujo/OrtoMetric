@@ -57,14 +57,30 @@ def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
     app.config["RATELIMIT_STORAGE_URI"] = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
 
     # Aceita token por cookie e header para suportar browser e clientes API.
+    # Em dev/test: defaults funcionam em HTTP local.
+    # Em produção: defaults são voltados a front/back em domínios distintos.
+    cookie_samesite_default = "None" if env_mode == "production" and not is_testing else "Lax"
+    cookie_samesite = str(os.getenv("JWT_COOKIE_SAMESITE", cookie_samesite_default))
+    cookie_secure_default = env_mode == "production" and not is_testing
+    cookie_secure_env = os.getenv("JWT_COOKIE_SECURE")
+    cookie_secure = (
+        cookie_secure_default
+        if cookie_secure_env is None
+        else cookie_secure_env.lower() in {"1", "true", "yes", "on"}
+    )
+
     app.config["JWT_TOKEN_LOCATION"] = ["cookies", "headers"]
     app.config["JWT_COOKIE_CSRF_PROTECT"] = True
-    app.config["JWT_COOKIE_SECURE"] = env_mode == "production"
-    app.config["JWT_COOKIE_SAMESITE"] = os.getenv("JWT_COOKIE_SAMESITE", "Lax")
+    app.config["JWT_COOKIE_SECURE"] = cookie_secure
+    app.config["JWT_COOKIE_SAMESITE"] = cookie_samesite
     app.config["JWT_ACCESS_COOKIE_NAME"] = "access_token_cookie"
     app.config["JWT_REFRESH_COOKIE_NAME"] = "refresh_token_cookie"
     app.config["JWT_ACCESS_CSRF_COOKIE_NAME"] = "csrf_access_token"
     app.config["JWT_REFRESH_CSRF_COOKIE_NAME"] = "csrf_refresh_token"
+
+    cookie_domain = os.getenv("JWT_COOKIE_DOMAIN")
+    if cookie_domain:
+        app.config["JWT_COOKIE_DOMAIN"] = cookie_domain
 
     # Permite sobrescrever configuracoes no contexto de testes.
     if config_overrides:
@@ -81,13 +97,19 @@ def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
         "http://localhost:5173,http://127.0.0.1:5173,"
         "http://localhost:5174,http://127.0.0.1:5174",
     )
+
+    origin_values = [
+        origin.strip()
+        for origin in frontend_origins.split(",")
+        if origin.strip()
+    ]
+    frontend_origin_regex = os.getenv("FRONTEND_ORIGIN_REGEX", "").strip()
+    if frontend_origin_regex:
+        origin_values.append(frontend_origin_regex)
+
     CORS(
         app,
-        origins=[
-            origin.strip()
-            for origin in frontend_origins.split(",")
-            if origin.strip()
-        ],
+        origins=origin_values,
         supports_credentials=True,
     )
 

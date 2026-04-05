@@ -6,8 +6,29 @@ if (!apiBaseUrl) {
     throw new Error("VITE_API_URL is required");
 }
 
+function normalizeLocalApiUrl(rawUrl: string): string {
+    if (typeof window === "undefined") return rawUrl;
+
+    const localHosts = new Set(["localhost", "127.0.0.1"]);
+
+    try {
+        const parsed = new URL(rawUrl);
+        const pageHost = window.location.hostname;
+
+        // Evita mismatch comum em dev: frontend em 127.0.0.1 e API em localhost (ou vice-versa).
+        if (localHosts.has(pageHost) && localHosts.has(parsed.hostname) && pageHost !== parsed.hostname) {
+            parsed.hostname = pageHost;
+            return parsed.toString();
+        }
+
+        return rawUrl;
+    } catch {
+        return rawUrl;
+    }
+}
+
 const api = axios.create({
-    baseURL: apiBaseUrl,
+    baseURL: normalizeLocalApiUrl(apiBaseUrl),
     withCredentials: true,
     headers: {
         "Content-Type": "application/json",
