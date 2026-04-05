@@ -36,6 +36,6 @@ export type AuthForm = {
     fieldErrors: Partial<Record<keyof AuthFormData, string>>;
     isSubmitting: boolean;
     onChange: (field: keyof AuthFormData, value: string) => void;
-    onSubmit: () => void;
+    onSubmit: () => Promise<void> | void;
     onSwitchMode: (mode: AuthMode) => void;
 };

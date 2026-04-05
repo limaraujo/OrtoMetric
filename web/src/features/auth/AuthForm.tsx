@@ -10,7 +10,7 @@ export function AuthForm(props: AuthForm) {
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit().catch(() => undefined);
+        void Promise.resolve(onSubmit()).catch(() => undefined);
       }}
       className="w-full rounded-3xl border border-border bg-card/90 p-6 shadow-2xl shadow-primary/20 backdrop-blur"
     >
