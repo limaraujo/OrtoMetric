@@ -4,5 +4,10 @@
   "version": "0.0.0",
   "workspaces": [
     "web"
-  ]
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
 }
