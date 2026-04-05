@@ -23,6 +23,30 @@ from services.measurement_type_service import MeasurementTypeService
 from services.user_service import UserService
 
 
+def _validate_jwt_secret_strength(
+    secret: str | None,
+    *,
+    env_mode: str,
+    is_testing: bool,
+) -> None:
+    if is_testing or not secret:
+        return
+
+    # RFC 7518 recomenda no minimo 256 bits (32 bytes) para HS256.
+    secret_size_bytes = len(secret.encode("utf-8"))
+    if secret_size_bytes < 32:
+        if env_mode == "production":
+            raise RuntimeError(
+                "JWT_SECRET_KEY muito curta para producao. "
+                "Use no minimo 32 bytes (recomendado 64+)."
+            )
+
+        logging.getLogger(__name__).warning(
+            "JWT secret com %s bytes (recomendado >= 32 bytes para HS256).",
+            secret_size_bytes,
+        )
+
+
 def _resolve_cors_origins() -> list[str]:
     raw_origins = os.getenv(
         "FRONTEND_ORIGINS",
@@ -119,7 +143,9 @@ def create_app(config_overrides: Mapping[str, object] | None = None) -> Flask:
     if env_mode == "production" and not jwt_secret:
         raise RuntimeError("JWT_SECRET_KEY não configurado em produção")
 
-    app.config["JWT_SECRET_KEY"] = jwt_secret or "dev-only-secret"
+    _validate_jwt_secret_strength(jwt_secret, env_mode=env_mode, is_testing=is_testing)
+
+    app.config["JWT_SECRET_KEY"] = jwt_secret or "dev-only-secret-with-at-least-32-bytes!!"
 
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(
         minutes=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES_MINUTES", "30"))
