@@ -7,7 +7,13 @@ export function AuthForm(props: AuthForm) {
   const { mode, form, error, fieldErrors, isSubmitting, onChange, onSubmit, onSwitchMode } = props;
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="w-full rounded-3xl border border-border bg-card/90 p-6 shadow-2xl shadow-primary/20 backdrop-blur">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit().catch(() => undefined);
+      }}
+      className="w-full rounded-3xl border border-border bg-card/90 p-6 shadow-2xl shadow-primary/20 backdrop-blur"
+    >
       <div className="mb-6">
         <h2 className="mb-2 text-3xl font-black tracking-tight text-foreground">
           {mode === "login" ? "Bem-vindo" : "Crie sua conta"}

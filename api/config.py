@@ -7,7 +7,11 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 
 def _sanitize_database_url(database_url: str) -> str:
-    # Erro comum de colar "DATABASE_URL_IPV4=..." dentro do valor da propria variavel.
+    # Erro comum de colar "DATABASE_URL=..." dentro do valor da propria variavel.
+    if database_url.startswith("DATABASE_URL="):
+        return database_url[len("DATABASE_URL="):]
+
+    # Tambem aceita valor colado como "DATABASE_URL_IPV4=...".
     if database_url.startswith("DATABASE_URL_IPV4="):
         return database_url[len("DATABASE_URL_IPV4="):]
     return database_url
@@ -106,12 +110,16 @@ def resolve_database_url(config_overrides: Mapping[str, object] | None = None) -
         if override_value:
             override_database_url = str(override_value)
 
-    database_url = override_database_url or os.getenv("DATABASE_URL_IPV4")
+    database_url = (
+        override_database_url
+        or os.getenv("DATABASE_URL")
+        or os.getenv("DATABASE_URL_IPV4")
+    )
 
     # 🔴 não deixa o app subir sem DB, mas erro mais claro
     if not database_url:
         raise RuntimeError(
-            "DATABASE_URL_IPV4 não configurada no ambiente (Render/Prod)"
+            "DATABASE_URL não configurada no ambiente (Render/Prod)"
         )
 
     sanitized_url = _sanitize_database_url(database_url)
@@ -121,15 +129,15 @@ def resolve_database_url(config_overrides: Mapping[str, object] | None = None) -
 
     if force_ipv4:
         # Permite URL alternativa já em endpoint IPv4 (ex.: Supabase pooler).
-        database_url_ipv4 = os.getenv("DATABASE_URL_IPV4_IPV4", "").strip()
+        database_url_ipv4 = os.getenv("DATABASE_URL_IPV4", "").strip()
         if database_url_ipv4:
             return _normalize_database_url(_sanitize_database_url(database_url_ipv4))
 
         resolved_url = _apply_ipv4_hostaddr(normalized_url)
         if resolved_url == normalized_url:
             raise RuntimeError(
-                "DB_FORCE_IPV4 ativo, mas o host de DATABASE_URL_IPV4 nao possui IPv4 resolvivel neste ambiente. "
-                "Defina DATABASE_URL_IPV4_IPV4 com endpoint pooler IPv4 (Supabase Session/Transaction Pooler)."
+                "DB_FORCE_IPV4 ativo, mas o host de DATABASE_URL nao possui IPv4 resolvivel neste ambiente. "
+                "Defina DATABASE_URL_IPV4 com endpoint pooler IPv4 (Supabase Session/Transaction Pooler)."
             )
         normalized_url = resolved_url
 
@@ -148,7 +156,7 @@ def validate_production_database(database_url: str, *, is_testing: bool) -> None
         if not database_url.startswith("postgresql://") and not database_url.startswith(
             "postgresql+psycopg://"
         ):
-            print("[WARN] DATABASE_URL_IPV4 não parece PostgreSQL")
+            print("[WARN] DATABASE_URL não parece PostgreSQL")
 
         if "sslmode=require" not in database_url:
-            print("[WARN] sslmode=require não encontrado na DATABASE_URL_IPV4 (pode ser opcional no Render)")
+            print("[WARN] sslmode=require não encontrado na DATABASE_URL (pode ser opcional no Render)")
