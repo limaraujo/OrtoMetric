@@ -29,8 +29,6 @@ def _is_truthy_env(var_name: str, *, default: bool) -> bool:
 
 
 def _apply_ipv4_hostaddr(database_url: str) -> str:
-    # Para alguns ambientes (ex.: Render), a rota IPv6 pode falhar.
-    # Ao adicionar hostaddr com IPv4 ao DSN do libpq, evitamos fallback em AAAA.
     try:
         parsed = urlsplit(database_url)
     except Exception:
@@ -47,6 +45,7 @@ def _apply_ipv4_hostaddr(database_url: str) -> str:
     if any(key == "hostaddr" for key, _ in query_pairs):
         return database_url
 
+    # Tenta IPv4 primeiro
     try:
         ipv4_results = socket.getaddrinfo(
             hostname,
@@ -54,27 +53,42 @@ def _apply_ipv4_hostaddr(database_url: str) -> str:
             family=socket.AF_INET,
             type=socket.SOCK_STREAM,
         )
-    except socket.gaierror:
-        print("[WARN] Nao foi possivel resolver IPv4 para DATABASE_URL host")
-        return database_url
+        if ipv4_results:
+            hostaddr = ipv4_results[0][4][0]
+            query_pairs.append(("hostaddr", hostaddr))
+            print(f"[INFO] Forçando IPv4: {hostaddr}")
+            updated_query = urlencode(query_pairs)
+            return urlunsplit((
+                parsed.scheme, parsed.netloc,
+                parsed.path, updated_query, parsed.fragment,
+            ))
+    except socket.gaierror as e:
+        print(f"[WARN] Falha ao resolver IPv4: {e}")
 
-    if not ipv4_results:
-        print("[WARN] Host do DATABASE_URL sem endereco IPv4")
-        return database_url
-
-    hostaddr = ipv4_results[0][4][0]
-    query_pairs.append(("hostaddr", hostaddr))
-    updated_query = urlencode(query_pairs)
-
-    return urlunsplit(
-        (
-            parsed.scheme,
-            parsed.netloc,
-            parsed.path,
-            updated_query,
-            parsed.fragment,
+    # Fallback: tenta qualquer família e pega o primeiro IPv4 disponível
+    try:
+        all_results = socket.getaddrinfo(
+            hostname,
+            parsed.port or 5432,
+            family=socket.AF_UNSPEC,
+            type=socket.SOCK_STREAM,
         )
-    )
+        for result in all_results:
+            # AF_INET = IPv4
+            if result[0] == socket.AF_INET:
+                hostaddr = result[4][0]
+                query_pairs.append(("hostaddr", hostaddr))
+                print(f"[INFO] IPv4 encontrado via AF_UNSPEC: {hostaddr}")
+                updated_query = urlencode(query_pairs)
+                return urlunsplit((
+                    parsed.scheme, parsed.netloc,
+                    parsed.path, updated_query, parsed.fragment,
+                ))
+        print("[WARN] Nenhum endereço IPv4 disponível, usando URL original")
+    except socket.gaierror as e:
+        print(f"[WARN] Falha total na resolução DNS: {e}")
+
+    return database_url
 
 
 def resolve_database_url(config_overrides: Mapping[str, object] | None = None) -> str:
